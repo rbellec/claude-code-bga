@@ -83,7 +83,9 @@ experiments/            ← results from additional game experiments
 
 ## Results
 
-### Experiment 1: Quantum Tic-Tac-Toe
+This workflow has been developed and tested on two games so far:
+
+### Quantum Tic-Tac-Toe — [source](https://github.com/rbellec/BGA_quantum_tic_tac_toe)
 
 *Completed in a single Claude Code session (~3 hours wall time):*
 
@@ -98,13 +100,13 @@ experiments/            ← results from additional game experiments
 - Deploy-test cycles: ~15
 - Human interventions: ~5 (SFTP key setup, Express Stop on stuck tables, browser extension reconnect)
 
-### Further experiments
+### Go On Rasalva — [source](https://github.com/rbellec/Go-On-Rasalva-on-BGA)
 
-Additional games are being tested using the same skill file and workflow. Results will be added here and in `experiments/` as they are completed.
+*(Results to be documented)*
 
 ## Limitations
 
-- **Early stage** — the skill file has been validated on one game so far; more experiments are needed
+- **Early stage** — the skill file has been validated on two games so far; more experiments are needed
 - **Simplified rules only** — the first experiment implemented a simplified variant; full rules require more iterations
 - **No tests** — all validation done via the browser test loop; no unit tests
 - **Minimal UI** — functional but not polished
