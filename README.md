@@ -1,34 +1,68 @@
-# Claude Code + Board Game Arena: A Constrained Development Experiment
+# Claude Code + Board Game Arena: AI-Assisted Game Development
 
-This repository documents a method for developing a board game on [Board Game Arena](https://studio.boardgamearena.com) (BGA) using [Claude Code](https://claude.ai/claude-code) as the primary development tool — from published rules to a playable hotseat game, without manual code writing.
+## For BGA game developers: quick start
 
-The first experiment uses **Quantum Tic-Tac-Toe** (Allan Goff, AJP 2006). Further experiments with other games will follow. But the point of this repo is not any specific game — it's the **method**: a reproducible workflow for using an AI coding assistant within a constrained, real-world environment.
+**Want to use Claude Code to build your BGA game?** This repo provides a skill file and workflow that give Claude Code the knowledge it needs to work effectively within BGA Studio's constraints.
 
-## What this demonstrates
+> **This is a work in progress.** The skill file and workflow are being actively refined through multiple game experiments. They work, but expect rough edges. Your feedback is valuable — please [open an issue](../../issues) if something breaks, is missing, or could be clearer.
+
+### Getting started (5 minutes)
+
+1. **Install Claude Code** — [CLI](https://claude.ai/claude-code), desktop app, or IDE extension
+2. **Install [Claude in Chrome](https://chrome.google.com/webstore/detail/claude-in-chrome)** — needed for the automated test loop on BGA Studio
+3. **Copy the skill file** into your Claude Code skills directory:
+   ```bash
+   mkdir -p ~/.claude/skills/bga-alpha
+   cp SKILL.md ~/.claude/skills/bga-alpha/SKILL.md
+   ```
+4. **Have your BGA Studio account ready** — game registered, SSH key configured ([BGA docs](https://en.doc.boardgamearena.com/Studio))
+5. **Start Claude Code in your project directory** and tell it to implement your game:
+   ```
+   I want to implement [GAME NAME] on BGA Studio.
+   Here are the rules: [paste rules or link to rulebook]
+   My BGA username is [USERNAME] and the game name is [GAMENAME].
+   ```
+
+Claude Code will use the skill file to handle the BGA-specific setup (Makefile, config files, state machine, deploy workflow) and the browser extension to test directly on BGA Studio.
+
+### What the skill file covers
+
+- Project scaffolding (Makefile, directory structure, config files)
+- BGA new framework patterns (PHP 8.4, state classes, notifications, globals)
+- JavaScript client structure (ES6 modules, state handlers)
+- Automated deploy-test loop via Chrome extension
+- Known BGA pitfalls and how to avoid them (SQL comments, table names, DB query gotchas)
+
+### What you still need to do yourself
+
+- Create the BGA Studio account and register your game
+- Set up the SSH key for SFTP access (can take up to 1h to propagate)
+- Manually quit stuck game tables when BGA's UI requires it
+- Reconnect the Chrome extension if it drops
+- Review the generated code — it's an alpha, not production-ready
+
+See `workflow.md` for the full step-by-step development sequence, and `prompts/` for example prompts adapted from the first experiment.
+
+---
+
+## About this project
+
+This repository documents a method for developing board games on [Board Game Arena](https://studio.boardgamearena.com) using [Claude Code](https://claude.ai/claude-code) as the primary development tool — from published rules to a playable hotseat game, without manual code writing.
+
+The first experiment uses **Quantum Tic-Tac-Toe** (Allan Goff, AJP 2006). Further experiments with other games are in progress. The point of this repo is not any specific game — it's the **method**: a reproducible workflow for using an AI coding assistant within a constrained, real-world environment.
+
+### What this demonstrates
 
 1. **Constraint-driven development** — BGA is a fixed environment: specific PHP framework, SFTP-only deployment, no shell access, Svelte-based UI. The AI must work within these constraints, not around them.
-2. **Rules as spec** — The published game rules serve as the formal specification. No product manager, no design doc — just a paper from the American Journal of Physics.
-3. **Browser as test harness** — With no SSH access to BGA servers, the browser (via the Claude in Chrome extension) is the only way to observe runtime behavior, read errors, and verify game state.
-4. **Skill files as accumulated knowledge** — A `SKILL.md` file captures BGA-specific patterns, pitfalls, and framework behaviors discovered during development. It persists across sessions and prevents the same mistakes from being made twice.
+2. **Rules as spec** — The published game rules serve as the formal specification. No product manager, no design doc — just a rulebook.
+3. **Browser as test harness** — With no SSH access to BGA servers, the browser (via Claude in Chrome) is the only way to observe runtime behavior, read errors, and verify game state.
+4. **Skill files as accumulated knowledge** — The `SKILL.md` captures BGA-specific patterns, pitfalls, and framework behaviors discovered during development. It persists across sessions and prevents the same mistakes from being made twice.
 
-## What this does NOT claim
+### What this does NOT claim
 
 - That AI can autonomously develop production software
 - That the resulting game code is optimal or complete
 - That this approach scales to complex games without significant human oversight
-
-The experiment produced a working alpha with known limitations (see [Results](#results) and [Limitations](#limitations)).
-
-## Prerequisites
-
-To reproduce this workflow on your own BGA game:
-
-- [Claude Code CLI](https://claude.ai/claude-code) (or Claude Code desktop/IDE extension)
-- [Claude in Chrome](https://chrome.google.com/webstore/detail/claude-in-chrome) browser extension (for the test loop)
-- A [BGA Studio](https://studio.boardgamearena.com) developer account with a registered game
-- SSH key configured for BGA Studio SFTP access
-- PHP installed locally (for `make check` / lint)
-- Published rules for your target game
 
 ## Repository structure
 
@@ -44,15 +78,8 @@ prompts/
   03-ui.md              ← client-side rendering and interaction
 screenshots/            ← annotated screenshots of key moments
 game/                   ← the actual game source code (quantictactoe)
-experiments/            ← results from additional game experiments (future)
+experiments/            ← results from additional game experiments
 ```
-
-## How to use this on another BGA game
-
-1. **Copy `SKILL.md`** into your Claude Code skills directory (`~/.claude/skills/bga-alpha/SKILL.md`). This gives Claude Code the BGA framework knowledge it needs.
-2. **Read `workflow.md`** to understand the sequence: scaffold download, config files, PHP states, JS client, deploy-test loop.
-3. **Adapt the prompts** in `prompts/` to your game's rules. The structure (setup, mechanics, UI) transfers to any turn-based BGA game.
-4. **Run the test loop** described in the skill file: deploy via `make deploy`, create a table in BGA Studio, add a hotseat player, read console errors, fix, repeat. Each cycle takes ~30 seconds.
 
 ## Results
 
@@ -73,28 +100,29 @@ experiments/            ← results from additional game experiments (future)
 
 ### Further experiments
 
-Additional games will be tested using the same skill file and workflow. Results will be added here and in the `experiments/` directory as they are completed.
+Additional games are being tested using the same skill file and workflow. Results will be added here and in `experiments/` as they are completed.
 
 ## Limitations
 
-- **Simplified rules only** — simultaneous win scoring (half-point variant) not implemented
+- **Early stage** — the skill file has been validated on one game so far; more experiments are needed
+- **Simplified rules only** — the first experiment implemented a simplified variant; full rules require more iterations
 - **No tests** — all validation done via the browser test loop; no unit tests
-- **Minimal UI** — collapse choice is text-only (no board highlighting or preview)
-- **BGA-specific knowledge required** — the skill file encodes hard-won BGA framework knowledge; without it, the AI hits the same pitfalls repeatedly
-- **Browser extension fragility** — the Claude in Chrome connection dropped once mid-session; manual reconnect needed
+- **Minimal UI** — functional but not polished
+- **BGA-specific knowledge required** — the skill file encodes hard-won framework knowledge; without it, the AI hits the same pitfalls repeatedly
+- **Browser extension fragility** — the Claude in Chrome connection can drop mid-session
 - **No AI opponent** — 2-player hotseat only
 
 ## Next steps
 
-- [ ] Implement full scoring variant (half-point for simultaneous wins)
-- [ ] Better collapse UI (highlight cycle path, preview collapse result)
-- [ ] BGA built-in tutorial integration
-- [ ] Extract a generic BGA skill file (not quantum-tic-tac-toe-specific)
-- [ ] Add unit tests for graph algorithms
+- [ ] Validate the workflow on 2-3 more games of increasing complexity
+- [ ] Extract a fully generic skill file (remove quantum-tic-tac-toe specifics)
+- [ ] Fill in the prompt templates with real, tested examples
 - [ ] Document token/cost usage per phase
+- [ ] Add unit testing patterns for BGA game logic
+- [ ] BGA built-in tutorial integration
 
 ## License
 
 MIT License. See [LICENSE](LICENSE).
 
-The game *Quantum Tic-Tac-Toe* was invented by Allan Goff. Game rules are credited and attributed; this repository contains only the BGA implementation code, not the game design itself.
+The game *Quantum Tic-Tac-Toe* was invented by Allan Goff. Game rules are credited and attributed; this repository contains only the BGA implementation code and the development methodology.
