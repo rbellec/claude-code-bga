@@ -97,22 +97,24 @@ BGA Studio is **SFTP-only** (no SSH shell) — rsync does not work. Use `scp` wi
 ```php
 <?php
 declare(strict_types=1);
-namespace Bga\Games\GAMENAME;
+namespace Bga\Games\GameName;  // PascalCase — matches the scaffold
 
 use Bga\GameFramework\Table;
 
 class Game extends Table
 {
+    // Game constants — prefer class constants over define() in material.inc.php
+    // (define() creates globals invisible inside the namespace)
+    public const MY_CONSTANT = 1;
+
     public function __construct() {
         parent::__construct();
         // Minimal — do NOT call initGameStateLabels here
     }
 
     protected function initTable(): void {
-        // Put initGameStateLabels here, NOT in constructor
-        $this->initGameStateLabels([
-            'turn_number' => 10,
-        ]);
+        // Using $this->bga->globals for all state (any type, JSON-serialized)
+        // initGameStateLabels is legacy and int-only — avoid it
     }
 
     public function setupNewGame(array $players, array $options = []): mixed {
@@ -142,11 +144,11 @@ class Game extends Table
 ```
 
 **Critical `Game.php` rules:**
-- Namespace: `Bga\Games\GAMENAME` (lowercase, exact game name)
-- `initGameStateLabels` goes in `initTable()`, NOT constructor
+- Namespace: `Bga\Games\GameName` — **PascalCase**, matching the scaffold (not lowercase)
+- **Constants:** use `public const` in Game.php, NOT `define()` in `material.inc.php`. `define()` creates global constants that are invisible inside the game's namespace. Reference as `self::MY_CONST` in Game.php, `Game::MY_CONST` in States.
+- **Globals:** use `$this->bga->globals->set/get` (any type, JSON-serialized). `initGameStateLabels` is legacy and **int-only** — these are two distinct systems, do not mix them
 - `material.inc.php` is auto-included by the framework — **never** `include()` it manually
-- Guard all `define()`: `defined('X') || define('X', val)`
-- No `self::` on instance methods — PHP 8.4 generates warnings that corrupt JSON output. Use `$this->` everywhere
+- No `self::` on instance methods — PHP 8.4 generates warnings that corrupt JSON output. Use `$this->` everywhere. (`self::CONST` for class constants is fine)
 - `{$var}` not `${var}` in strings (PHP 8.4)
 - `implode(separator, array)` not `implode(array, separator)` (PHP 8.4)
 
@@ -155,13 +157,13 @@ class Game extends Table
 ```php
 <?php
 declare(strict_types=1);
-namespace Bga\Games\GAMENAME\States;
+namespace Bga\Games\GameName\States;
 
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
 use Bga\GameFramework\UserException;
-use Bga\Games\GAMENAME\Game;
+use Bga\Games\GameName\Game;
 
 class PlayerTurn extends GameState
 {
@@ -210,9 +212,10 @@ public function actChoose(string $choice): string {
 ### 2.4 New framework API
 
 ```php
-// Globals (replaces setGameStateValue/getGameStateValue)
-$this->bga->globals->set('turn_number', $n);
+// Globals — modern API (any type, JSON-serialized)
+$this->bga->globals->set('turn_number', $n);        // int, string, array, bool — all work
 $n = (int)$this->bga->globals->get('turn_number');
+// ⚠ initGameStateLabels is a SEPARATE legacy system — int-only, do not mix with bga->globals
 
 // Notifications (3 params)
 $this->bga->notify->all('eventName', clienttranslate('${player_name} did X'), [
@@ -243,10 +246,14 @@ export class Game {  // MUST be named exactly "Game"
 
     setup(gamedatas) {
         // initial board rendering
+        // ⚠ IMPORTANT: onEnteringState is NOT called after setup()
+        // Read initial state args from gamedatas.gamestate.args:
+        const stateArgs = gamedatas.gamestate?.args;
+        // Use stateArgs to render the complete initial UI
     }
 
     onEnteringState(stateName, args) {
-        // show/hide UI per state
+        // show/hide UI per state (called on state transitions, NOT after setup)
     }
 
     onLeavingState(stateName) { }
@@ -293,32 +300,53 @@ mcp__claude-in-chrome__navigate(tabId, url: "https://studio.boardgamearena.com/l
 
 Wait 3 seconds.
 
-### 3.4 Create table
+### 3.4 Create table + start with hotseat
+
+Click "Play with friends" on the lobby page, then "Express start" on the table page:
 
 ```javascript
-document.getElementById('joingame_create_{GAME_ID}').click()
+// Step 1: On the lobby page (/lobby?game=GAME_ID), click "Play with friends"
+const pwf = Array.from(document.querySelectorAll('a')).find(a => a.textContent.includes('Play with friends'));
+pwf?.click();
 ```
 
-Wait 5 seconds. URL should change to `/table?table=N`.
-
-**If table already exists**: first quit via `document.getElementById('quit_game')?.click()`, wait 3 seconds, then retry.
-
-### 3.5 Add hotseat player
+Wait 5 seconds — URL changes to `/table?table=N`.
 
 ```javascript
-// Step a: open invite panel
-document.getElementById('invite_friend').click()
-// wait 2s
-// Step b: select hotseat slot
-document.getElementById('player_select_-99').click()
-// wait 2s
-// Step c: name and confirm
-const i = document.getElementById('hotseat_player_name');
-const b = document.getElementById('select_hotseat_name_btn');
-if (i && b) { i.value = 'Player2'; i.dispatchEvent(new Event('input', {bubbles:true})); b.click(); }
+// Step 2: On the table page, click "Express start" (overriding confirm dialog)
+const origConfirm = window.confirm;
+window.confirm = () => true;
+const expressBtn = Array.from(document.querySelectorAll('a, button')).find(b => b.textContent.trim() === 'Express start');
+expressBtn?.click();
+window.confirm = origConfirm;
 ```
 
-Wait 10 seconds — BGA creates the game and runs `setupNewGame`.
+Wait 5 seconds — BGA creates the hotseat game and redirects to `/tableview?table=N`.
+
+### 3.5 Navigate to player view
+
+BGA redirects to `/tableview` (spectator view) after Express start. Navigate to the **player view**:
+
+```
+mcp__claude-in-chrome__navigate(tabId, url: "https://studio.boardgamearena.com/1/{GAME_NAME}?table=N")
+```
+
+- `/1/GAMENAME?table=N` = **player view** (can play, sees hand)
+- `/tableview?table=N` = **spectator view** (no `game_play_area`, cannot play)
+- Add `?testuser=PLAYER_ID` to play as the other player in hotseat
+
+### 3.5b Quitting a table programmatically
+
+From the **game page** (not lobby), use `gameui.ajaxcall`:
+
+```javascript
+gameui.ajaxcall('/table/table/quitgame.html', {table: TABLE_ID, neutralized: true, s: 'table_quitgame'}, gameui,
+  () => console.log('quit ok'),
+  () => console.log('quit err')
+);
+```
+
+Note: `mainsite` is not defined on game pages — use `gameui` instead. Direct `fetch()` fails (CSRF), but `gameui.ajaxcall` adds the token automatically.
 
 ### 3.6 Read errors
 
@@ -477,11 +505,11 @@ If you need to document the schema, do it in a separate Markdown file (e.g., `SC
 `dbmodel.sql` runs **once per new game table instance** (when `setupNewGame` is called). `CREATE TABLE IF NOT EXISTS` will silently skip if a table already exists with a wrong schema.
 
 **When the schema is wrong on an existing table:**
-1. Quit **all** game table instances from the Studio lobby (click the Quit button manually in the browser — programmatic quit via JS injection fails due to BGA's Svelte/CSRF session handling)
+1. Quit **all** game table instances — either manually via the browser, or programmatically from the game page using `gameui.ajaxcall('/table/table/quitgame.html', {table: N, neutralized: true}, gameui, ok, err)`
 2. Create a fresh table — the correct `dbmodel.sql` will be applied
 3. If the table name conflicts with a BGA internal table, rename it (e.g., `moves` → `q_moves`) and redeploy before creating the fresh table
 
-**Cannot quit tables programmatically** from injected JS — BGA's CSRF token for lobby actions is bound to the Svelte session and cannot be replicated via `dojo.xhrPost` or `fetch`. The user must click Quit manually in the browser.
+**Programmatic quit works** from the game page via `gameui.ajaxcall` (which adds the CSRF token automatically). Direct `fetch()` fails due to CSRF. The `mainsite` global is available on the lobby page, `gameui` on the game page.
 
 ---
 
