@@ -235,7 +235,90 @@ $rows = $this->getCollectionFromDb("SELECT * FROM my_table");  // not getObjectL
 $row  = $this->getObjectFromDB("SELECT * FROM my_table WHERE id=$id");
 ```
 
-### 2.5 Game.js structure
+### 2.5 BGA Components — Tested & Untested
+
+#### Deck component (PHP) — ✅ TESTED, RECOMMENDED
+
+Use the built-in Deck for all card management. It eliminates ~50 lines of manual SQL.
+
+**Setup (constructor):**
+```php
+$this->cards = $this->deckFactory->createDeck('vr_card');
+$this->cards->autoreshuffle = true;
+$this->cards->autoreshuffle_trigger = ['obj' => $this, 'method' => 'onReshuffle'];
+```
+
+**Database table** (in `dbmodel.sql` — exact format required):
+```sql
+CREATE TABLE IF NOT EXISTS `vr_card` (
+  `card_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `card_type` VARCHAR(20) NOT NULL,
+  `card_type_arg` INT(11) NOT NULL,
+  `card_location` VARCHAR(20) NOT NULL,
+  `card_location_arg` INT(11) NOT NULL,
+  PRIMARY KEY (`card_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1;
+```
+
+**Key methods:**
+```php
+$this->cards->createCards($defs, 'deck');           // setup only
+$this->cards->shuffle('deck');
+$this->cards->pickCards(8, 'deck', $playerId);      // returns picked cards
+$this->cards->getPlayerHand($playerId);             // returns cards in hand
+$this->cards->playCard($cardId);                    // move to discard
+$this->cards->countCardInLocation('deck');           // count
+$this->cards->moveCard($id, 'location', $arg);     // move anywhere
+```
+
+**Card definitions format** (for `createCards`):
+```php
+$cards = [
+    ['type' => 'king',   'type_arg' => 1, 'nbr' => 12],
+    ['type' => 'wizard', 'type_arg' => 2, 'nbr' => 8],
+];
+```
+
+**Encoding subtypes:** The Deck only has `type` (string) and `type_arg` (int). Encode subtypes in the type name: `"guard_g1"`, `"guard_g11"`, `"jester_jM"`. Then parse with a helper:
+```php
+public static function parseCard(array $card): array {
+    $deckType = $card['type'];
+    $baseType = self::CARD_TYPE_TO_BASE[$deckType] ?? $deckType;
+    $subtype = str_contains($deckType, '_') ? substr($deckType, strpos($deckType, '_') + 1) : null;
+    return ['card_id' => $card['id'], 'card_type' => $baseType, 'card_value' => (int)$card['type_arg'], 'card_subtype' => $subtype];
+}
+```
+
+**Lessons learned:**
+- Create the Deck in the **constructor**, not `initTable()` — otherwise references break
+- `createCards()` only in `setupNewGame()` — never in constructor
+- `pickCards()` returns the drawn cards (useful for notifications)
+- `autoreshuffle` handles deck-empty → reshuffle-discard automatically with callback
+- Increase `varchar(16)` to `varchar(20)` if using long type names or player IDs in locations
+- Schema change = must create a fresh table (old tables keep old schema)
+
+#### Other PHP components — 🔲 UNTESTED
+
+| Component | Purpose | Notes |
+|-----------|---------|-------|
+| PlayerCounter / TableCounter | Numeric counters | Alternative to globals for simple counts |
+
+#### JS components — 🔲 UNTESTED
+
+| Component | Purpose | Notes |
+|-----------|---------|-------|
+| bga-cards | Card display & animation | Likely pairs well with PHP Deck |
+| bga-dice | Dice rolling & display | For dice-based games |
+| bga-animations | Animation utilities | State transitions |
+| bga-score-sheet | End-game scoring display | Animated score summary |
+| bga-autofit | Text fitting | Auto-size text in containers |
+| Stock | Display sets of elements | Classic BGA component |
+| Zone | Organize elements in areas | Board layout |
+| Scrollmap | Scrollable game area | For large boards (Carcassonne-style) |
+| Counter | Display numeric values | Score display |
+| Draggable | Drag-and-drop | Tile placement games |
+
+### 2.6 Game.js structure
 
 ```javascript
 // modules/js/Game.js — ES6, no framework dependencies
@@ -519,3 +602,45 @@ If you need to document the schema, do it in a separate Markdown file (e.g., `SC
 - Use `read_console_messages` with a pattern filter, not `read_page`
 - Reuse one browser tab for the whole session
 - No screenshots unless explicitly requested
+
+---
+
+## BGA Best Practices & Pitfalls (from docs + experience)
+
+### PHP / Server
+
+- **DB integers return as strings** — always cast: `(int)$row['value']`
+- **Use `bga_rand(min, max)`** for dice/random — `rand()` and `mt_rand()` forbidden in review
+- **Never use TRUNCATE or DROP** — they do implicit commits that break BGA's transaction rollback
+- **Never call `getCurrentPlayerId()`** in `setupNewGame()`, `zombieTurn()`, or args methods — causes "Not logged" errors
+- **Cannot change active player** inside ACTIVE_PLAYER states — use a GAME-type state for that
+- **Args methods must return arrays** — never int/string, never modify DB in args
+- **At least one notification per action** is required (state transitions count)
+- **Notification size limit**: 128KB total across bundled requests
+- **`getCollectionFromDb()` uses first column as array key** — duplicate values silently overwrite. Always put a unique column first.
+- **String comparison**: use `===` not `==` — hex colors like `'4baae2'` miscast with `==`
+- **Action autowiring** (new framework): `#[PossibleAction]` + typed parameters = no action.php needed
+
+### JavaScript / Client
+
+- **`setup()` runs before `onEnteringState()`** — render complete initial state in setup using `gamedatas.gamestate.args`
+- **In MULTIPLE_ACTIVE_PLAYER states**: active players are NOT active yet in `onEnteringState` — use `onUpdateActionButtons` for active-dependent UI
+- **`slideToObject()` returns dojo animation** — must call `.play()` on the result
+- **Slide methods incompatible with CSS transforms** (scale, zoom, rotate)
+- **Check `bgaAnimationsActive()`** before animating
+- **`parseInt(value, 10)`** — notification args are strings, `+=` will concatenate instead of add
+- **Hotseat shares `gamedatas`** across players — no per-player client data
+- **Read-only detection**: check `isCurrentPlayerSpectator() || typeof g_replayFrom != 'undefined' || g_archive_mode`
+
+### Zombie handling
+
+- Never call `getCurrentPlayerId()` in `zombieTurn()` — use the `$active_player_id` parameter
+- States must have a `"zombiePass"` transition (exact spelling)
+- Cannot end game from zombie method — must continue game logic
+
+### Debug tips
+
+- **Express stop** on the table config page kills a stuck game (overrides confirm with `window.confirm = () => true`)
+- **Temporary debug actions** (`#[PossibleAction]`) are effective for testing end-game / specific positions — call via `gameui.ajaxcall`, remove before commit
+- **Full SQL/request logs**: `/1/GAME_NAME/GAME_NAME/logaccess.html?table=N`
+- **CSS state class**: `#overall-content` gets `.gamestate_playerTurn` etc. — use for conditional visibility without JS
