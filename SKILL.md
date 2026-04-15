@@ -61,6 +61,22 @@ Create a Makefile with `check` (PHP lint) and `deploy` (SCP to BGA Studio) targe
 
 BGA Studio is **SFTP-only** (no SSH shell) — rsync does not work. Use `scp` with explicit file lists.
 
+### 1.4 Rules analysis and author clarification
+
+Before writing game logic, convert the rulebook to Markdown and analyze it systematically. This surfaces ambiguities that a program cannot resolve by "common sense" the way a human player would.
+
+1. **Convert rules to `doc/RULES.md`** — primary text reference; only go back to the PDF for illustrations
+2. **Analyze with a programmer's mindset** — inputs, outputs, edge cases, timing, interactions
+3. **Create `doc/QUESTIONS_AUTEURS.md`** — questions categorized by status (OPEN/ASSUMED/CLOSED) and type (RULES-MISSING, RULES-AMBIGUOUS, RULES-IMPLICIT, FEEDBACK, etc.)
+4. **Create `doc/ASSUMPTIONS.md`** — each assumption gets an ID `[Hx]` referenced in both questions and code
+5. **Maintain during development** — new questions go into the same document; close them when answered
+
+See `references/rules-clarification.md` for the full process, document format, categories, and anti-patterns.
+
+**Key rule:** don't block all implementation waiting for answers — categorize, assume where reasonable, and work on what's clear. But every assumption must be documented.
+
+**SSH key safety:** never read or list private files (`~/.ssh/id_rsa`, etc.). To get deployment config (username, key path), look at Makefiles of existing BGA projects in the workspace, or ask the user.
+
 ---
 
 ## Phase 2 — Implementation
@@ -374,6 +390,7 @@ For detailed API beyond the patterns above, load the relevant reference file.
 | Config files (options, prefs, stats, gameinfos) | `references/config-files.md` | Setting up or modifying config |
 | Translations & i18n | `references/translations.md` | Adding translatable strings |
 | BGA Studio Guidelines (layout, a11y, UX) | `references/guidelines.md` | Polishing UI / preparing for review |
+| Rules clarification process | `references/rules-clarification.md` | Analyzing rules, managing author Q&A |
 
 ---
 
