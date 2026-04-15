@@ -8,9 +8,9 @@ A [Claude Code](https://claude.ai/claude-code) skill file for developing board g
 2. **Install [Claude in Chrome](https://chrome.google.com/webstore/detail/claude-in-chrome)** — needed for the automated test loop on BGA Studio
 3. **Copy the skill file and references** into your Claude Code skills directory:
    ```bash
-   mkdir -p ~/.claude/skills/bga-alpha
-   cp SKILL.md ~/.claude/skills/bga-alpha/SKILL.md
-   cp -r references ~/.claude/skills/bga-alpha/references
+   mkdir -p ~/.claude/skills/board-game-arena
+   cp SKILL.md ~/.claude/skills/board-game-arena/SKILL.md
+   cp -r references ~/.claude/skills/board-game-arena/references
    ```
 4. **Have your BGA Studio account ready** — game registered, SSH key configured ([BGA docs](https://en.doc.boardgamearena.com/Studio))
 5. **Start Claude Code in your project directory** and tell it to implement your game:

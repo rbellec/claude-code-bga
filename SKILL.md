@@ -1,10 +1,10 @@
 ---
-name: bga-alpha
-description: Implement a board game alpha on Board Game Arena (BGA) Studio, from rules+graphics to a playable hotseat game. Covers project setup, new framework (2025+) architecture, PHP state machine, JS client, and the automated deploy→test loop.
+name: board-game-arena
+description: Implement a board game on Board Game Arena (BGA) Studio, from rules+graphics to a playable hotseat game. Covers project setup, new framework (2025+) architecture, PHP state machine, JS client, and the automated deploy→test loop.
 disable-model-invocation: false
 ---
 
-# BGA Alpha — From Rules to Playable Game
+# Board Game Arena — From Rules to Playable Game
 
 You are helping implement a board game on Board Game Arena Studio, using the **new BGA framework (2025+)**. The workflow has three phases: **Setup**, **Implementation**, and **Test Loop**.
 
@@ -16,6 +16,7 @@ You are helping implement a board game on Board Game Arena Studio, using the **n
 - SSH key generated and submitted in BGA Studio settings (propagation: up to 1h)
   - Generate: `ssh-keygen -t ed25519 -f ~/.ssh/id_rsa_bga`
   - Test: `sftp -i ~/.ssh/id_rsa -P 2022 -o IdentitiesOnly=yes USERNAME@1.studio.boardgamearena.com`
+  - **SSH key safety:** never read or list private files (`~/.ssh/id_rsa`, etc.). To get deployment config (username, key path), look at Makefiles of existing BGA projects in the workspace, or ask the user.
 - Chrome extension "Claude in Chrome" connected
 - `make check` and `make deploy` working in the project directory
 - Game rules document available (provided by user)
@@ -67,15 +68,13 @@ Before writing game logic, convert the rulebook to Markdown and analyze it syste
 
 1. **Convert rules to `doc/RULES.md`** — primary text reference; only go back to the PDF for illustrations
 2. **Analyze with a programmer's mindset** — inputs, outputs, edge cases, timing, interactions
-3. **Create `doc/QUESTIONS_AUTEURS.md`** — questions categorized by status (OPEN/ASSUMED/CLOSED) and type (RULES-MISSING, RULES-AMBIGUOUS, RULES-IMPLICIT, FEEDBACK, etc.)
+3. **Create `doc/AUTHOR_QUESTIONS.md`** — questions categorized by status (OPEN/ASSUMED/CLOSED) and type (RULES-MISSING, RULES-AMBIGUOUS, RULES-IMPLICIT, FEEDBACK, etc.)
 4. **Create `doc/ASSUMPTIONS.md`** — each assumption gets an ID `[Hx]` referenced in both questions and code
 5. **Maintain during development** — new questions go into the same document; close them when answered
 
 See `references/rules-clarification.md` for the full process, document format, categories, and anti-patterns.
 
 **Key rule:** don't block all implementation waiting for answers — categorize, assume where reasonable, and work on what's clear. But every assumption must be documented.
-
-**SSH key safety:** never read or list private files (`~/.ssh/id_rsa`, etc.). To get deployment config (username, key path), look at Makefiles of existing BGA projects in the workspace, or ask the user.
 
 ---
 

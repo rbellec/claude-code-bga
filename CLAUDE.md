@@ -5,14 +5,14 @@
 A repository for sharing the BGA development skill file for Claude Code. It provides everything needed for a developer to use Claude Code to implement a board game on Board Game Arena Studio.
 
 Key artifacts:
-- `SKILL.md` — the Claude Code skill file (primary artifact), symlinked at `~/.claude/skills/bga-alpha/`
+- `SKILL.md` — the Claude Code skill file (primary artifact), symlinked at `~/.claude/skills/board-game-arena/`
 - `references/` — detailed reference guides for each BGA framework library (Deck, BgaCards, Stock, etc.), loaded on demand by the skill
 - `TECHNICAL_NOTES.md` — detailed explanations of the pitfalls encoded in SKILL.md (the *why* behind each rule)
 - `README.md` / `README.fr.md` — usage instructions in English and French
 
 ## Skill file maintenance
 
-`SKILL.md` is the source of truth for the skill. It is symlinked into `~/.claude/skills/bga-alpha/SKILL.md` — edits here take effect immediately in Claude Code sessions.
+`SKILL.md` is the source of truth for the skill. It is symlinked into `~/.claude/skills/board-game-arena/SKILL.md` — edits here take effect immediately in Claude Code sessions.
 
 When adding new BGA pitfalls or patterns:
 1. Add the short rule to the appropriate section in `SKILL.md` (with fix in the error table if applicable)
