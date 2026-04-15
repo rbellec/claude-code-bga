@@ -162,6 +162,8 @@ namespace Bga\Games\GameName\States;
 use Bga\GameFramework\StateType;
 use Bga\GameFramework\States\GameState;
 use Bga\GameFramework\States\PossibleAction;
+use Bga\GameFramework\Actions\Types\IntArrayParam;
+use Bga\GameFramework\Actions\Types\StringParam;
 use Bga\GameFramework\UserException;
 use Bga\Games\GameName\Game;
 
@@ -179,8 +181,20 @@ class PlayerTurn extends GameState
         $playerId = $this->game->getCurrentPlayerId();
         // validate...
         // do work...
+        // Send notification for every action
+        $this->game->bga->notify->all('somethingDone', clienttranslate('${player_name} did something'), [
+            'player_id' => $playerId,
+            'player_name' => $this->game->getPlayerNameById($playerId),
+        ]);
         return NextState::class; // return the next state class, not a string
     }
+
+    // Action parameter validation (autowired — no action.php needed)
+    #[PossibleAction]
+    public function actSelectCards(#[IntArrayParam] array $ids): string { ... }
+
+    #[PossibleAction]
+    public function actMove(#[StringParam(enum: ['up','down','left','right'])] string $dir): string { ... }
 }
 ```
 
@@ -268,9 +282,18 @@ export class Game {  // MUST be named exactly "Game"
     }
 
     setup(gamedatas) {
-        // initial board rendering
-        // ⚠ IMPORTANT: onEnteringState is NOT called after setup()
-        // Read initial state args from gamedatas.gamestate.args:
+        // 1. Build board/pieces from gamedatas
+        for (const [pid, player] of Object.entries(gamedatas.players)) {
+            // render player areas
+        }
+
+        // 2. Connect click handlers
+        this.bga.gameui.connectClass('my-piece', 'onclick', 'onPieceClick');
+
+        // 3. Setup notification handlers (auto-detects notif_* methods)
+        this.bga.notifications.setupPromiseNotifications();
+
+        // 4. Render initial state (onEnteringState is NOT called after setup)
         const stateArgs = gamedatas.gamestate?.args;
         // Use stateArgs to render the complete initial UI
     }
@@ -282,17 +305,102 @@ export class Game {  // MUST be named exactly "Game"
     onLeavingState(stateName) { }
 
     onUpdateActionButtons(stateName, args) {
-        // add action buttons via gameui.addActionButton(...)
+        // Add action buttons — REQUIRED for multiactive states
+        if (stateName === 'playerTurn') {
+            this.bga.statusBar.addActionButton(_('Pass'), () => {
+                this.bga.actions.performAction('actPass');
+            }, { color: 'secondary' });
+        }
     }
 
-    // Action handler
-    _onMyAction() {
-        bga.actions.performAction('actDoSomething', { param: 'value' });
+    // Notification handlers — auto-registered by setupPromiseNotifications()
+    // Name = 'notif_' + the notification type from PHP notify->all('somethingDone', ...)
+    async notif_somethingDone(args) {
+        // args = PHP notification args; values are STRINGS — parseInt() before arithmetic
+        await this.bga.gameui.slideToObject('token', 'target').play().promise;
+    }
+
+    // Action handler — ONLY from user events, NEVER from notifications/loops/callbacks
+    onPieceClick(e) {
+        const id = e.currentTarget.id;
+        this.bga.actions.performAction('actSelectPiece', { id: parseInt(id, 10) });
     }
 }
 ```
 
-Assets: reference as `g_gamethemeurl + 'img/file.svg'`
+Assets: reference as `g_gamethemeurl + 'img/file.svg'` or `this.bga.images.getImgUrl('file.svg')`
+
+### 2.7 Config file templates
+
+For full format details, see `references/config-files.md`.
+
+**gameoptions.json** (game-affecting options, shown at table creation):
+```json
+{
+    "100": {
+        "name": "Board size",
+        "values": {
+            "1": { "name": "Small" },
+            "2": { "name": "Standard", "tmdisplay": "Standard board" }
+        },
+        "default": 2
+    }
+}
+```
+
+**stats.json** (displayed at game end):
+```json
+{
+    "table": {
+        "total_rounds": { "id": 10, "name": "Number of rounds", "type": "int" }
+    },
+    "player": {
+        "cards_played": { "id": 10, "name": "Cards played", "type": "int" }
+    }
+}
+```
+
+**gamepreferences.json** (cosmetic, per player):
+```json
+{
+    "100": {
+        "name": "Colorblind mode",
+        "values": { "0": { "name": "Disabled" }, "1": { "name": "Enabled" } },
+        "default": 0,
+        "needReload": true,
+        "cssPref": true
+    }
+}
+```
+
+**gameinfos.inc.php** — essential fields:
+```php
+$gameinfos = [
+    'players' => [2, 3, 4],
+    'suggest_player_number' => 3,
+    'player_colors' => ['ff0000', '008000', '0000ff', 'ffa500'],
+    'favorite_colors_support' => true,
+    'is_beta' => 1,  // cannot be 0 until release
+    'is_coop' => 0,
+    'complexity' => 2, 'luck' => 2, 'strategy' => 3, 'diplomacy' => 1,
+    'bgg_id' => 0,
+];
+```
+
+Config rules: no comments in JSON, no trailing commas, names are auto-translated (no `totranslate()` needed). After changes: deploy AND reload via BGA Studio manage page.
+
+### 2.8 BGA Framework — Deep Reference
+
+For detailed API beyond the patterns above, load the relevant reference file.
+
+| Topic | Reference | When to load |
+|-------|-----------|--------------|
+| JS full API (DOM, animations, tooltips, dialogs, panels) | `references/js-framework.md` | Building complex UI |
+| PHP full API (DB, players, states, scoring, undo) | `references/php-framework.md` | Advanced game logic |
+| Notification system (PHP + JS) | `references/notifications.md` | Custom notification handling |
+| Config files (options, prefs, stats, gameinfos) | `references/config-files.md` | Setting up or modifying config |
+| Translations & i18n | `references/translations.md` | Adding translatable strings |
+| BGA Studio Guidelines (layout, a11y, UX) | `references/guidelines.md` | Polishing UI / preparing for review |
 
 ---
 
@@ -560,17 +668,27 @@ If you need to document the schema, do it in a separate Markdown file (e.g., `SC
 - **`getCollectionFromDb()` uses first column as array key** — duplicate values silently overwrite. Always put a unique column first.
 - **String comparison**: use `===` not `==` — hex colors like `'4baae2'` miscast with `==`
 - **Action autowiring** (new framework): `#[PossibleAction]` + typed parameters = no action.php needed
+- **Forbidden action parameter names**: `$args`, `$activePlayerId`, `$currentPlayerId` — reserved by framework
+- **`escapeStringForDB($str)`** — mandatory for any player-supplied string in SQL
+- **`getObjectListFromDB($sql)`** — simple array (no key issues); use instead of `getCollectionFromDb` when first column may have duplicates
+- **`activeNextPlayer()` / `changeActivePlayer()`** — only works in GAME-type states, not ACTIVE_PLAYER
+- **Use `clienttranslate()`** for all notification messages — literal text only, no variables inside
 
 ### JavaScript / Client
 
 - **`setup()` runs before `onEnteringState()`** — render complete initial state in setup using `gamedatas.gamestate.args`
+- **Call `setupPromiseNotifications()`** in `setup()` — auto-detects all `notif_*` methods
 - **In MULTIPLE_ACTIVE_PLAYER states**: active players are NOT active yet in `onEnteringState` — use `onUpdateActionButtons` for active-dependent UI
+- **`performAction` only from user events** — NEVER from notifications, loops, callbacks, or state methods
 - **`slideToObject()` returns dojo animation** — must call `.play()` on the result
 - **Slide methods incompatible with CSS transforms** (scale, zoom, rotate)
 - **Check `bgaAnimationsActive()`** before animating
 - **`parseInt(value, 10)`** — notification args are strings, `+=` will concatenate instead of add
 - **Hotseat shares `gamedatas`** across players — no per-player client data
 - **Read-only detection**: check `isCurrentPlayerSpectator() || typeof g_replayFrom != 'undefined' || g_archive_mode`
+- **Prefix CSS classes** with game name — e.g., `mygame_selected`, not `selected`
+- **`attachToNewParent` clones** the element — destroys original references and dojo.connect handlers
+- **Never call setState in notifications** — causes race conditions and breaks replays
 
 ### Zombie handling
 
