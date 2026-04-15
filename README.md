@@ -43,6 +43,7 @@ See `TECHNICAL_NOTES.md` for detailed explanations of the pitfalls and their roo
 
 ## Games built with this skill
 
+- [Visite Royale / Royal Visit](https://github.com/rbellec/bga_visite_royale) — card game, tug-of-war mechanics
 - [Quantum Tic-Tac-Toe](https://github.com/rbellec/BGA_quantum_tic_tac_toe) — quantum superposition mechanics, entanglement graph, cycle detection
 - [Go On Rasalva](https://github.com/rbellec/Go-On-Rasalva-on-BGA) — tile placement, resource management
 

@@ -43,6 +43,7 @@ Voir `TECHNICAL_NOTES.md` pour les explications détaillées des pièges et de l
 
 ## Jeux construits avec ce skill
 
+- [Visite Royale / Royal Visit](https://github.com/rbellec/bga_visite_royale) — jeu de cartes, mecaniques de tir a la corde
 - [Quantum Tic-Tac-Toe](https://github.com/rbellec/BGA_quantum_tic_tac_toe) — mécaniques de superposition quantique, graphe d'intrication, détection de cycles
 - [Go On Rasalva](https://github.com/rbellec/Go-On-Rasalva-on-BGA) — placement de tuiles, gestion de ressources
 
