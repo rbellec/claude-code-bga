@@ -14,6 +14,7 @@ These files are designed to be loaded on demand by Claude Code when implementing
 | Config Files | [config-files.md](config-files.md) | gameoptions.json, gamepreferences.json, stats.json, gameinfos.inc.php |
 | Translations | [translations.md](translations.md) | i18n patterns: clienttranslate, _(), i18n array, bga_format |
 | Guidelines | [guidelines.md](guidelines.md) | BGA Studio review standards: layout, accessibility, UX, design |
+| Makefile Template | [makefile-template.md](makefile-template.md) | Project setup: check + deploy targets (used once at init) |
 
 ## PHP (Server-side)
 
