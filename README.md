@@ -22,6 +22,19 @@ A [Claude Code](https://claude.ai/claude-code) skill file for developing board g
 
 Claude Code will use the skill file to handle the BGA-specific setup (Makefile, config files, state machine, deploy workflow) and the browser extension to test directly on BGA Studio.
 
+6. **(Optional) Allow git and deploy commands without prompting** — the skill commits automatically at each milestone. To avoid confirmation prompts, add to your `.claude/settings.local.json` (not committed to git):
+   ```json
+   {
+     "permissions": {
+       "allow": [
+         "Bash(git *)",
+         "Bash(make *)",
+         "Bash(scp *)"
+       ]
+     }
+   }
+   ```
+
 ## What the skill file covers
 
 - Project scaffolding (Makefile, directory structure, config files)
