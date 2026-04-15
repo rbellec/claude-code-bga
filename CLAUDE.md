@@ -6,6 +6,7 @@ A repository for sharing the BGA development skill file for Claude Code. It prov
 
 Key artifacts:
 - `SKILL.md` — the Claude Code skill file (primary artifact), symlinked at `~/.claude/skills/bga-alpha/`
+- `references/` — detailed reference guides for each BGA framework library (Deck, BgaCards, Stock, etc.), loaded on demand by the skill
 - `TECHNICAL_NOTES.md` — detailed explanations of the pitfalls encoded in SKILL.md (the *why* behind each rule)
 - `README.md` / `README.fr.md` — usage instructions in English and French
 
@@ -16,6 +17,11 @@ Key artifacts:
 When adding new BGA pitfalls or patterns:
 1. Add the short rule to the appropriate section in `SKILL.md` (with fix in the error table if applicable)
 2. Add the detailed explanation to `TECHNICAL_NOTES.md` (with a *why* section)
+
+When adding or updating BGA library references:
+1. Add/update the reference file in `references/` (follow the standard format: Setup, API, Example, Pitfalls)
+2. Ensure the library appears in the quick-reference table in `SKILL.md` section 2.5
+3. Update `references/README.md` index
 
 ## Language
 

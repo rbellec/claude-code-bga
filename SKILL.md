@@ -235,88 +235,28 @@ $rows = $this->getCollectionFromDb("SELECT * FROM my_table");  // not getObjectL
 $row  = $this->getObjectFromDB("SELECT * FROM my_table WHERE id=$id");
 ```
 
-### 2.5 BGA Components — Tested & Untested
+### 2.5 BGA Libraries — Quick Reference
 
-#### Deck component (PHP) — ✅ TESTED, RECOMMENDED
+When you need a game component, check this table FIRST. Each library has a detailed reference in `references/`. **Read the reference file before implementing** — it contains setup code, full API, and pitfalls.
 
-Use the built-in Deck for all card management. It eliminates ~50 lines of manual SQL.
+| Need | Library | Reference | Side |
+|------|---------|-----------|------|
+| Cards/tiles (server logic) | **Deck** | `references/deck.md` | PHP |
+| Cards/tiles (client display) | **BgaCards** | `references/bga-cards.md` | JS |
+| Per-player counters (money, resources) | **PlayerCounter** | `references/player-table-counter.md` | PHP |
+| Game-wide counter (round, phase) | **TableCounter** | `references/player-table-counter.md` | PHP |
+| Numeric display with animation | **Counter** | `references/counter.md` | JS |
+| Dice rolling & display | **BgaDice** | `references/bga-dice.md` | JS |
+| Item collections (hand, market) | **Stock** | `references/stock.md` | JS |
+| Token placement areas | **Zone** | `references/zone.md` | JS |
+| Scrollable/infinite board | **Scrollmap** | `references/scrollmap.md` | JS |
+| Move animations & scoring | **BgaAnimations** | `references/bga-animations.md` | JS |
+| End-game score sheet | **BgaScoreSheet** | `references/bga-score-sheet.md` | JS |
+| Auto-size text on cards | **BgaAutofit** | `references/bga-autofit.md` | JS |
+| Collapsible sections | **ExpandableSection** | `references/expandable-section.md` | JS |
+| Drag-and-drop (legacy) | **Draggable** | `references/draggable.md` | JS |
 
-**Setup (constructor):**
-```php
-$this->cards = $this->deckFactory->createDeck('vr_card');
-$this->cards->autoreshuffle = true;
-$this->cards->autoreshuffle_trigger = ['obj' => $this, 'method' => 'onReshuffle'];
-```
-
-**Database table** (in `dbmodel.sql` — exact format required):
-```sql
-CREATE TABLE IF NOT EXISTS `vr_card` (
-  `card_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `card_type` VARCHAR(20) NOT NULL,
-  `card_type_arg` INT(11) NOT NULL,
-  `card_location` VARCHAR(20) NOT NULL,
-  `card_location_arg` INT(11) NOT NULL,
-  PRIMARY KEY (`card_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=1;
-```
-
-**Key methods:**
-```php
-$this->cards->createCards($defs, 'deck');           // setup only
-$this->cards->shuffle('deck');
-$this->cards->pickCards(8, 'deck', $playerId);      // returns picked cards
-$this->cards->getPlayerHand($playerId);             // returns cards in hand
-$this->cards->playCard($cardId);                    // move to discard
-$this->cards->countCardInLocation('deck');           // count
-$this->cards->moveCard($id, 'location', $arg);     // move anywhere
-```
-
-**Card definitions format** (for `createCards`):
-```php
-$cards = [
-    ['type' => 'king',   'type_arg' => 1, 'nbr' => 12],
-    ['type' => 'wizard', 'type_arg' => 2, 'nbr' => 8],
-];
-```
-
-**Encoding subtypes:** The Deck only has `type` (string) and `type_arg` (int). Encode subtypes in the type name: `"guard_g1"`, `"guard_g11"`, `"jester_jM"`. Then parse with a helper:
-```php
-public static function parseCard(array $card): array {
-    $deckType = $card['type'];
-    $baseType = self::CARD_TYPE_TO_BASE[$deckType] ?? $deckType;
-    $subtype = str_contains($deckType, '_') ? substr($deckType, strpos($deckType, '_') + 1) : null;
-    return ['card_id' => $card['id'], 'card_type' => $baseType, 'card_value' => (int)$card['type_arg'], 'card_subtype' => $subtype];
-}
-```
-
-**Lessons learned:**
-- Create the Deck in the **constructor**, not `initTable()` — otherwise references break
-- `createCards()` only in `setupNewGame()` — never in constructor
-- `pickCards()` returns the drawn cards (useful for notifications)
-- `autoreshuffle` handles deck-empty → reshuffle-discard automatically with callback
-- Increase `varchar(16)` to `varchar(20)` if using long type names or player IDs in locations
-- Schema change = must create a fresh table (old tables keep old schema)
-
-#### Other PHP components — 🔲 UNTESTED
-
-| Component | Purpose | Notes |
-|-----------|---------|-------|
-| PlayerCounter / TableCounter | Numeric counters | Alternative to globals for simple counts |
-
-#### JS components — 🔲 UNTESTED
-
-| Component | Purpose | Notes |
-|-----------|---------|-------|
-| bga-cards | Card display & animation | Likely pairs well with PHP Deck |
-| bga-dice | Dice rolling & display | For dice-based games |
-| bga-animations | Animation utilities | State transitions |
-| bga-score-sheet | End-game scoring display | Animated score summary |
-| bga-autofit | Text fitting | Auto-size text in containers |
-| Stock | Display sets of elements | Classic BGA component |
-| Zone | Organize elements in areas | Board layout |
-| Scrollmap | Scrollable game area | For large boards (Carcassonne-style) |
-| Counter | Display numeric values | Score display |
-| Draggable | Drag-and-drop | Tile placement games |
+> **Workflow:** identify the need → find the library in the table → read `references/<file>.md` → implement using the patterns from the reference.
 
 ### 2.6 Game.js structure
 

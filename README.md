@@ -6,10 +6,11 @@ A [Claude Code](https://claude.ai/claude-code) skill file for developing board g
 
 1. **Install Claude Code** — [CLI](https://claude.ai/claude-code), desktop app, or IDE extension
 2. **Install [Claude in Chrome](https://chrome.google.com/webstore/detail/claude-in-chrome)** — needed for the automated test loop on BGA Studio
-3. **Copy the skill file** into your Claude Code skills directory:
+3. **Copy the skill file and references** into your Claude Code skills directory:
    ```bash
    mkdir -p ~/.claude/skills/bga-alpha
    cp SKILL.md ~/.claude/skills/bga-alpha/SKILL.md
+   cp -r references ~/.claude/skills/bga-alpha/references
    ```
 4. **Have your BGA Studio account ready** — game registered, SSH key configured ([BGA docs](https://en.doc.boardgamearena.com/Studio))
 5. **Start Claude Code in your project directory** and tell it to implement your game:
@@ -26,6 +27,7 @@ Claude Code will use the skill file to handle the BGA-specific setup (Makefile, 
 - Project scaffolding (Makefile, directory structure, config files)
 - BGA new framework patterns (PHP 8.4, state classes, notifications, globals)
 - JavaScript client structure (ES6 modules, state handlers)
+- **BGA library references** — detailed guides for Deck, BgaCards, Stock, Counter, Scrollmap, and 10 other BGA framework libraries, loaded on demand to keep context usage low (see `references/`)
 - Automated deploy-test loop via Chrome extension
 - Known BGA pitfalls and how to avoid them (SQL comments, table names, DB query gotchas)
 
