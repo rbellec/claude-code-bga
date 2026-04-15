@@ -1,8 +1,20 @@
-# BGA Library References
+# BGA References
 
-Detailed reference guides for Board Game Arena framework libraries. Each file is self-contained: setup, API, example, and pitfalls.
+Detailed reference guides for BGA framework APIs and libraries. Each file is self-contained: setup, API, example, and pitfalls.
 
-These files are designed to be loaded on demand by Claude Code when implementing a game that needs a specific library. The main skill file (`SKILL.md`) contains the decision table pointing here.
+These files are designed to be loaded on demand by Claude Code when implementing a game. The main skill file (`SKILL.md`) contains decision tables pointing here.
+
+## Framework Guides
+
+| Guide | File | Purpose |
+|-------|------|---------|
+| JS Framework | [js-framework.md](js-framework.md) | Full JS client API (DOM, animations, tooltips, dialogs, panels, sounds) |
+| PHP Framework | [php-framework.md](php-framework.md) | Full PHP server API (DB, players, states, scoring, undo, random) |
+| Notifications | [notifications.md](notifications.md) | Complete notification system (PHP send + JS receive + sync) |
+| Config Files | [config-files.md](config-files.md) | gameoptions.json, gamepreferences.json, stats.json, gameinfos.inc.php |
+| Translations | [translations.md](translations.md) | i18n patterns: clienttranslate, _(), i18n array, bga_format |
+| Guidelines | [guidelines.md](guidelines.md) | BGA Studio review standards: layout, accessibility, UX, design |
+| Makefile Template | [makefile-template.md](makefile-template.md) | Project setup: check + deploy targets (used once at init) |
 
 ## PHP (Server-side)
 
