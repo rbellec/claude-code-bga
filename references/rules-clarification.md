@@ -22,6 +22,8 @@ Create `doc/RULES.md` from the rulebook PDF. This becomes the primary reference 
 
 **Why Markdown first:** avoids re-reading the PDF repeatedly (slow, expensive in tokens), makes rules searchable and diffable, and forces a careful first reading that surfaces ambiguities.
 
+**Critical: stay faithful to the source text.** Do not add interpretations, clarifications, or implied details into RULES.md. If the PDF says "in any direction" do NOT write "up, down, left, right" — that's an interpretation that may be wrong (e.g., it might include diagonals). Interpretations go in `doc/ASSUMPTIONS.md` with an `[Hx]` tag. RULES.md is the ground truth; ASSUMPTIONS.md is where you reason about it.
+
 ## Step 2 — Systematic Analysis
 
 Read through RULES.md with a programmer's mindset. For every rule, ask:
@@ -29,6 +31,13 @@ Read through RULES.md with a programmer's mindset. For every rule, ask:
 - What happens at **boundaries** (edge of board, empty deck, no valid targets)?
 - What are the **interactions** between this rule and others?
 - Is the **timing** explicit (before/after other effects)?
+
+**Simulate mentally.** For each game mechanic (win conditions, movement, card effects), play through concrete scenarios in your head:
+- Victory: construct a specific board position for each win condition. Does the math work? (e.g., "3x2 group" = 6 cells, but rule says "5 aligned" — contradiction?)
+- Movement: place a piece on an edge, in a corner, surrounded — what happens?
+- Cards: draw each card type at the start of the game when the board is empty — can the action be performed?
+
+This simulation step catches contradictions and edge cases that pure text analysis misses.
 
 ## Step 3 — Categorize Questions
 
@@ -125,6 +134,8 @@ Each assumption has an ID `[Hx]` referenced in both the questions file and in co
 - **Don't ask authors implementation questions** — they don't know what a "state machine" is; translate to game terms
 - **Don't dump a wall of text** — group questions by theme, prioritize, keep each one short
 - **Don't forget to close questions** — stale OPEN questions create confusion
+- **Don't add interpretations to RULES.md** — keep it faithful to the source PDF; put interpretations in ASSUMPTIONS.md
+- **Don't restructure the document format later** — use the status/category format from the start (OPEN/ASSUMED/CLOSED + RULES-MISSING/AMBIGUOUS/IMPLICIT/VISUAL/FEEDBACK); restructuring wastes time and creates confusion
 
 ## Skill Integration Notes
 

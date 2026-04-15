@@ -21,7 +21,7 @@ You are helping implement a board game on Board Game Arena Studio, using the **n
 - `make check` and `make deploy` working in the project directory
 - Game rules document available (provided by user)
 - Graphics / assets available in `img/` (SVG preferred)
-- Git repository initialized (commits will be made at each milestone)
+- Git repository initialized (or empty directory — will be initialized in step 1.3)
 
 ---
 
@@ -38,6 +38,8 @@ sftp -i ~/.ssh/id_rsa -P 2022 -o IdentitiesOnly=yes USER@1.studio.boardgamearena
 ```
 
 **Never modify** `bga_initial_code_template/` — it's the framework reference.
+
+**→ Commit now** (scaffold + .gitignore).
 
 ### 1.2 Local directory structure
 
@@ -56,11 +58,15 @@ img/                              — assets (SVG, PNG)
 Makefile                          — check + deploy targets
 ```
 
-### 1.3 Makefile
+### 1.3 Makefile and git init
+
+If the repository has no commits yet, initialize it now: `git init`, create a `.gitignore` (exclude `bga_initial_code_template/`), and make the initial commit with the scaffold and project structure.
 
 Create a Makefile with `check` (PHP lint) and `deploy` (SCP to BGA Studio) targets. See `references/makefile-template.md` for the full template.
 
 BGA Studio is **SFTP-only** (no SSH shell) — rsync does not work. Use `scp` with explicit file lists.
+
+**→ Commit now** (Makefile + config files).
 
 ### 1.4 Rules analysis and author clarification
 
@@ -75,6 +81,8 @@ Before writing game logic, convert the rulebook to Markdown and analyze it syste
 See `references/rules-clarification.md` for the full process, document format, categories, and anti-patterns.
 
 **Key rule:** don't block all implementation waiting for answers — categorize, assume where reasonable, and work on what's clear. But every assumption must be documented.
+
+**→ Commit now** (doc/RULES.md + doc/AUTHOR_QUESTIONS.md + doc/ASSUMPTIONS.md).
 
 ---
 
@@ -527,16 +535,22 @@ links.find(a => a.textContent.includes('Reload game options'))?.click();
 
 ## Git Commits
 
-Make a commit at each significant milestone:
-- After scaffold download (step 1.1)
-- After first successful `make deploy`
-- After each bug fix cycle
+**Commit automatically after each completed step** — do not wait for the user to ask. Each commit should capture a coherent, working (or at least lint-passing) state.
+
+Commit points (at minimum):
+- After scaffold download and project structure setup (1.1–1.3)
+- After rules analysis and questions document (1.4)
+- After each implemented game state or feature (e.g., "feat: implement draft phase", "feat: add scoring")
+- After each successful bug fix cycle in Phase 3
+- After any significant refactoring
 
 ```bash
 git add -A && git commit -m "feat: description of what was done
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ```
+
+**Key rule:** smaller, frequent commits are better than large ones. If a step involves multiple independent changes (e.g., implementing two unrelated game states), commit each separately.
 
 ---
 
