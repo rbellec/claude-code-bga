@@ -1,6 +1,6 @@
 ---
 name: board-game-arena
-description: Implement a board game on Board Game Arena (BGA) Studio, from rules+graphics to a playable hotseat game. Covers project setup, new framework (2025+) architecture, PHP state machine, JS client, and the automated deploy→test loop.
+description: Implement a board game on Board Game Arena (BGA) Studio, from rules+graphics to a playable game. Covers project setup, new framework (2025+) architecture, PHP state machine, JS client, and the automated deploy→test loop.
 disable-model-invocation: false
 ---
 
