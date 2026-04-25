@@ -1,6 +1,6 @@
 # Claude Code + Board Game Arena : Skill de développement BGA
 
-Un skill [Claude Code](https://claude.ai/claude-code) pour développer des jeux sur [Board Game Arena](https://studio.boardgamearena.com) Studio — des règles publiées à un jeu hotseat jouable.
+Un skill [Claude Code](https://claude.ai/claude-code) pour développer des jeux sur [Board Game Arena](https://studio.boardgamearena.com) Studio — des règles publiées à un jeu jouable.
 
 Distribué à la fois comme **plugin Claude Code** et comme **package Vercel `skills`** — choisissez la méthode qui vous convient.
 
@@ -77,9 +77,11 @@ Voir [`TECHNICAL_NOTES.md`](TECHNICAL_NOTES.md) pour le *pourquoi* derrière cha
 
 ## Jeux construits avec ce skill
 
-- [Visite Royale / Royal Visit](https://github.com/rbellec/bga_visite_royale) — jeu de cartes, mécaniques de tir à la corde
 - [Quantum Tic-Tac-Toe](https://github.com/rbellec/BGA_quantum_tic_tac_toe) — mécaniques de superposition quantique, graphe d'intrication, détection de cycles
 - [Go On Rasalva](https://github.com/rbellec/Go-On-Rasalva-on-BGA) — placement de tuiles, gestion de ressources
+- Visite Royale / Royal Visit — jeu de cartes, mécaniques de tir à la corde *(le repo sera rendu public une fois la licence de l'éditeur obtenue)*
+- [Duelly](https://github.com/rbellec/bga_duelly) — adaptation en cours
+- [Renartefact](https://github.com/rbellec/bga_renartefact) — adaptation en cours
 
 ## Article
 

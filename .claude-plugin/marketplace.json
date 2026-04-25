@@ -7,7 +7,7 @@
     {
       "name": "board-game-arena",
       "source": "./",
-      "description": "BGA Studio development skill — rules to playable hotseat game."
+      "description": "BGA Studio development skill — from rules to a playable game."
     }
   ]
 }
