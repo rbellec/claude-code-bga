@@ -1,0 +1,13 @@
+{
+  "name": "claude-code-bga",
+  "owner": {
+    "name": "Raphael Bellec"
+  },
+  "plugins": [
+    {
+      "name": "board-game-arena",
+      "source": "./",
+      "description": "BGA Studio development skill — rules to playable hotseat game."
+    }
+  ]
+}

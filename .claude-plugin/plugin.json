@@ -1,0 +1,12 @@
+{
+  "name": "board-game-arena",
+  "description": "Implement a board game on Board Game Arena (BGA) Studio, from rules to a playable hotseat game. Covers project setup, new framework (2025+) architecture, PHP state machine, JS client, and the automated deploy→test loop.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Raphael Bellec",
+    "email": "raphael.bellec@gmail.com"
+  },
+  "homepage": "https://github.com/rbellec/claude-code-bga",
+  "repository": "https://github.com/rbellec/claude-code-bga",
+  "license": "MIT"
+}
