@@ -68,6 +68,19 @@ BGA Studio is **SFTP-only** (no SSH shell) — rsync does not work. Use `scp` wi
 
 **→ Commit now** (Makefile + config files).
 
+### 1.3b Optional: PHP code quality loop
+
+For users comfortable with PHP tooling, the skill can layer four quality tools on top of `make check`:
+
+- **PHP-CS-Fixer** (auto-apply) — formatting drift
+- **Rector** with `code-quality` + `dead-code` (auto-apply) — mechanical simplifications
+- **PHPStan** at level max — type inference, undefined methods
+- **PHPMD** — complexity / unused params / design smells
+
+Together they form a `make audit` target — a local "PR review" loop, read-only, ~10 s. Tools install once into a shared `~/.bga-tools/` Composer toolbox (no per-project re-install). The audit is **not gated on deploy** — quality is advisory, never blocks a session push.
+
+**Skip this section if you're not comfortable with PHP tooling — the skill works fine without it.** If you want it, see `references/php-code-quality.md` for the full setup (toolbox install, four config files, stubs for the BGA framework, baseline workflow, and an opt-in pre-commit hook).
+
 ### 1.4 Rules analysis and author clarification
 
 Before writing game logic, convert the rulebook to Markdown and analyze it systematically. This surfaces ambiguities that a program cannot resolve by "common sense" the way a human player would.
