@@ -589,8 +589,7 @@ Array.from(document.querySelectorAll('a')).find(a => a.href.match(/lobby\?game=\
 | `This transition (X) is impossible` | Return state class from act method instead of calling `setPlayerNonMultiactive(id, 'name')` |
 | `too many authentication failures` | Add `-o IdentitiesOnly=yes` to SSH/SCP commands |
 | Scores not showing at game end | Write scores with `$this->bga->playerScore->set($pid, $score)` in state 98, not state 99 |
-| `Unknown column 'X' in 'field list'` | The table was created from an older `dbmodel.sql`. BGA does NOT auto-migrate existing tables. Fix: rename the conflicting table (see below), then quit all game tables and create a fresh one. |
-| `Unknown column 'square1'` on a `moves` table | BGA may auto-create a `moves` table internally. **Never name a custom table `moves`** — use a game-specific name like `q_moves`, `entanglements`, etc. |
+| `Unknown column 'X' in 'field list'` | Check (a) inline `--` comments in `dbmodel.sql` (truncate the column list — see "No SQL Comments"); (b) the table was created from an older `dbmodel.sql` (BGA does not auto-migrate — quit all tables and start fresh); (c) the name is reserved (see "Table Name Conflicts" — `IF NOT EXISTS` silently no-ops). |
 | `static::DbQuery` or `self::DbQuery` | PHP 8.4 warns on static calls to instance methods, corrupting JSON. Always use `$this->DbQuery(...)`. Same applies to all other DB helpers. |
 | Logic bug: graph/query silently missing rows | `getCollectionFromDb()` uses the **first selected column** as the PHP array key — duplicate values silently overwrite each other. Always put a unique column (e.g., `id`, `move_number`) first: `SELECT move_number, square1, square2 FROM ...` not `SELECT square1, square2 FROM ...`. |
 
@@ -598,17 +597,9 @@ Array.from(document.querySelectorAll('a')).find(a => a.href.match(/lobby\?game=\
 
 ## BGA Framework — Table Name Conflicts
 
-BGA automatically creates several internal tables for each game instance. **Avoid these names** in `dbmodel.sql`:
+Reserved names — BGA creates these before `dbmodel.sql` runs, so `CREATE TABLE IF NOT EXISTS` silently no-ops and your custom columns are lost: `player`, `global`, `stats`, `gamelog`, `replaysavepoint`, plus anything starting with `bga_` (`bga_globals`, `bga_user_preferences`, `bga_player_counters`, …).
 
-| Reserved / risky name | Reason |
-|----------------------|--------|
-| `moves` | BGA may create a `moves` table internally with different columns |
-| `player` | Standard BGA table — already exists |
-| `global` | Standard BGA table |
-| `stats` | Standard BGA table |
-| `gamelog` | Standard BGA table |
-
-**Rule:** Always prefix custom tables with a game-specific prefix (e.g., `q_moves`, `qttt_board`) or use unambiguous names that couldn't conflict with BGA internals.
+**Rule:** prefix custom tables with a game-specific prefix (e.g., `q_moves`, `qttt_board`).
 
 ---
 
