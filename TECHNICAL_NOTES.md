@@ -38,10 +38,10 @@ MySQL sees `-- first column  \`b\` INT ...` as a single-line comment, eating `b`
 
 ```php
 // This query:
-$rows = $this->getCollectionFromDb("SELECT square1, square2 FROM q_moves");
-// Returns: ['0' => ['square1'=>'0','square2'=>'4'], '0' => ['square1'=>'0','square2'=>'8']]
-//                                                         ^-- overwrites the first row!
-// Actual result: only one row with square1=0 survives.
+$rows = $this->getCollectionFromDb("SELECT from_position, to_position FROM mygame_moves");
+// Returns: ['0' => ['from_position'=>'0','to_position'=>'4'], '0' => ['from_position'=>'0','to_position'=>'8']]
+//                                                                    ^-- overwrites the first row!
+// Actual result: only one row with from_position=0 survives.
 ```
 
 If two rows share the same value in the first column, the later row silently overwrites the earlier one. The array has fewer entries than expected, with no error or warning.
@@ -49,7 +49,7 @@ If two rows share the same value in the first column, the later row silently ove
 **Fix:** always put a unique column first:
 
 ```php
-$rows = $this->getCollectionFromDb("SELECT move_number, square1, square2 FROM q_moves");
+$rows = $this->getCollectionFromDb("SELECT move_number, from_position, to_position FROM mygame_moves");
 // Returns: ['1' => [...], '2' => [...], '3' => [...]]  — all rows preserved
 ```
 
@@ -57,23 +57,35 @@ $rows = $this->getCollectionFromDb("SELECT move_number, square1, square2 FROM q_
 
 ---
 
-## Why never name a custom table `moves`
+## Why custom tables must use a game-specific prefix
 
-BGA creates several internal tables per game instance at table-creation time. The internal schema for a `moves` table (if it exists) has different columns than any game-specific moves table. `CREATE TABLE IF NOT EXISTS` silently succeeds without creating the correct schema — the BGA internal table already satisfies the `IF NOT EXISTS` check.
+BGA creates its own internal tables for every new game instance, **before** `dbmodel.sql` runs. If your `dbmodel.sql` declares a table that collides with one of these names, `CREATE TABLE IF NOT EXISTS` reports success but creates nothing — the BGA-managed table already satisfies the `IF NOT EXISTS` check, so your columns are silently dropped on the floor. The first symptom is a runtime error like `Unknown column 'X' in 'field list'`.
 
-Known BGA-managed tables to avoid: `moves`, `player`, `global`, `stats`, `gamelog`.
+Known reserved names (non-exhaustive): `moves`, `player`, `global`, `stats`, `gamelog`, `replaysavepoint`, plus anything starting with `bga_` (`bga_globals`, `bga_user_preferences`, `bga_player_counters`, …).
 
-**Fix:** prefix with game name or use unambiguous names: `q_moves`, `qttt_board`, `mygame_tiles`, etc.
+**Fix:** prefix every custom table with a game-specific tag — `mygame_moves`, `mygame_board`, `mygame_tiles`, etc.
+
+## Why prefer `public const` over `define()` for game constants
+
+The new BGA framework puts game code under a namespace (`Bga\Games\GameName`). PHP `define()` registers constants in the **global** namespace, which makes them invisible from inside the namespace unless qualified with a leading backslash. Class constants declared with `public const` live on the class itself and are reached via `self::MY_CONST` (inside Game.php) or `Game::MY_CONST` (from State classes), with no namespace gymnastics.
+
+A second benefit: class constants are typed and IDE-autocompleted, while `define()` produces untyped globals.
+
+**Fix:** declare game constants as `public const` on the `Game` class. Reserve `material.inc.php` for static tabular data (tile costs, deck contents) — and even there, prefer arrays of class constants when feasible.
 
 ---
 
-## Why programmatic quit of game tables fails
+## Why programmatic quit must use `gameui.ajaxcall`
 
-BGA's table lobby uses Svelte + a CSRF token bound to the Svelte session. Actions like quitting a table require a valid CSRF token that is not accessible from injected JavaScript (`dojo.xhrPost`, `fetch`, etc.).
+BGA protects state-changing endpoints (like `quitgame.html`) with a CSRF token bound to the user session. The token is not visible from injected JavaScript, so a direct `fetch()` or `dojo.xhrPost()` is rejected.
 
-Consequence: you cannot quit a game table programmatically from Claude in Chrome. The user must click the Quit or "Express stop" button manually in the browser.
+`gameui.ajaxcall(...)`, available on game pages, automatically attaches the CSRF token from the page context, so it succeeds where raw `fetch()` fails.
 
-Workaround: BGA also auto-abandons broken tables after a timeout (a few minutes if `setupNewGame` fails repeatedly). For schema bugs, it is often faster to wait or ask the user to manually quit.
+Two consequences:
+- The call must be issued from the **game page** (`/1/GAME_NAME?table=N`), not from the lobby. On the lobby page `gameui` is undefined; the equivalent is `mainsite`.
+- It must be issued from the browser context (Claude in Chrome `javascript_tool`), not from a Node/curl script — the token lives in the page session.
+
+If the game page is not reachable (e.g., `setupNewGame` crashes before the page loads), fall back to manually clicking Quit in the browser, or wait for BGA's auto-abandon timeout (a few minutes after repeated `setupNewGame` failures).
 
 ---
 

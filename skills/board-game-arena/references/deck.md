@@ -4,13 +4,11 @@
 **Doc:** https://en.doc.boardgamearena.com/Deck
 **When to use:** Any game with cards or tiles that need shuffling, drawing, hands, or discard piles.
 
-**Status:** TESTED and RECOMMENDED from Visite Royale development.
-
 ## Setup
 
 **Constructor** (create in constructor, NOT `initTable()`):
 ```php
-$this->cards = $this->deckFactory->createDeck('vr_card');
+$this->cards = $this->deckFactory->createDeck('mygame_card');
 $this->cards->autoreshuffle = true;
 $this->cards->autoreshuffle_trigger = ['obj' => $this, 'method' => 'onReshuffle'];
 $this->cards->autoreshuffle_custom = ['deck' => 'discard']; // optional: custom source
@@ -18,7 +16,7 @@ $this->cards->autoreshuffle_custom = ['deck' => 'discard']; // optional: custom 
 
 **Database table** (`dbmodel.sql` — exact column names required):
 ```sql
-CREATE TABLE IF NOT EXISTS `vr_card` (
+CREATE TABLE IF NOT EXISTS `mygame_card` (
   `card_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `card_type` VARCHAR(20) NOT NULL,
   `card_type_arg` INT(11) NOT NULL,

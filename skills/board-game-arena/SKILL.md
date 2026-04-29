@@ -154,7 +154,7 @@ class Game extends Table
 
 **Critical `Game.php` rules:**
 - Namespace: `Bga\Games\GameName` — **PascalCase**, matching the scaffold (not lowercase)
-- **Constants:** use `public const` in Game.php, NOT `define()` in `material.inc.php`. `define()` creates global constants that are invisible inside the game's namespace. Reference as `self::MY_CONST` in Game.php, `Game::MY_CONST` in States.
+- **Constants:** declare as `public const` on the `Game` class, NOT `define()` in `material.inc.php`. Reference as `self::MY_CONST` in Game.php, `Game::MY_CONST` in States. (See `TECHNICAL_NOTES.md` for why `define()` breaks under namespaces.)
 - **Globals:** use `$this->bga->globals->set/get` (any type, JSON-serialized). `initGameStateLabels` is legacy and **int-only** — these are two distinct systems, do not mix them
 - `material.inc.php` is auto-included by the framework — **never** `include()` it manually
 - No `self::` on instance methods — PHP 8.4 generates warnings that corrupt JSON output. Use `$this->` everywhere. (`self::CONST` for class constants is fine)
@@ -478,7 +478,7 @@ mcp__claude-in-chrome__navigate(tabId, url: "https://studio.boardgamearena.com/1
 
 ### 3.5b Quitting a table programmatically
 
-From the **game page** (not lobby), use `gameui.ajaxcall`:
+From the **game page** (not lobby), use `gameui.ajaxcall` — it attaches the CSRF token automatically, while raw `fetch()` is rejected:
 
 ```javascript
 gameui.ajaxcall('/table/table/quitgame.html', {table: TABLE_ID, neutralized: true, s: 'table_quitgame'}, gameui,
@@ -487,7 +487,7 @@ gameui.ajaxcall('/table/table/quitgame.html', {table: TABLE_ID, neutralized: tru
 );
 ```
 
-Note: `mainsite` is not defined on game pages — use `gameui` instead. Direct `fetch()` fails (CSRF), but `gameui.ajaxcall` adds the token automatically.
+On the lobby page use `mainsite` instead of `gameui`. See `TECHNICAL_NOTES.md` for the *why*.
 
 ### 3.6 Read errors
 
@@ -602,48 +602,32 @@ Array.from(document.querySelectorAll('a')).find(a => a.href.match(/lobby\?game=\
 | `This transition (X) is impossible` | Return state class from act method instead of calling `setPlayerNonMultiactive(id, 'name')` |
 | `too many authentication failures` | Add `-o IdentitiesOnly=yes` to SSH/SCP commands |
 | Scores not showing at game end | Write scores with `$this->bga->playerScore->set($pid, $score)` in state 98, not state 99 |
-| `Unknown column 'X' in 'field list'` | The table was created from an older `dbmodel.sql`. BGA does NOT auto-migrate existing tables. Fix: rename the conflicting table (see below), then quit all game tables and create a fresh one. |
-| `Unknown column 'square1'` on a `moves` table | BGA may auto-create a `moves` table internally. **Never name a custom table `moves`** — use a game-specific name like `q_moves`, `entanglements`, etc. |
+| `Unknown column 'X' in 'field list'` | Check (a) inline `--` comments in `dbmodel.sql` (truncate the column list — see "No SQL Comments"); (b) the table was created from an older `dbmodel.sql` (BGA does not auto-migrate — quit all tables and start fresh); (c) the name is reserved (see "Table Name Conflicts" — `IF NOT EXISTS` silently no-ops). |
 | `static::DbQuery` or `self::DbQuery` | PHP 8.4 warns on static calls to instance methods, corrupting JSON. Always use `$this->DbQuery(...)`. Same applies to all other DB helpers. |
-| Logic bug: graph/query silently missing rows | `getCollectionFromDb()` uses the **first selected column** as the PHP array key — duplicate values silently overwrite each other. Always put a unique column (e.g., `id`, `move_number`) first: `SELECT move_number, square1, square2 FROM ...` not `SELECT square1, square2 FROM ...`. |
+| Logic bug: graph/query silently missing rows | `getCollectionFromDb()` uses the **first selected column** as the PHP array key — duplicate values silently overwrite each other. Always put a unique column (e.g., `id`, `move_number`) first: `SELECT move_number, from_position, to_position FROM ...` not `SELECT from_position, to_position FROM ...`. |
 
 ---
 
 ## BGA Framework — Table Name Conflicts
 
-BGA automatically creates several internal tables for each game instance. **Avoid these names** in `dbmodel.sql`:
-
-| Reserved / risky name | Reason |
-|----------------------|--------|
-| `moves` | BGA may create a `moves` table internally with different columns |
-| `player` | Standard BGA table — already exists |
-| `global` | Standard BGA table |
-| `stats` | Standard BGA table |
-| `gamelog` | Standard BGA table |
-
-**Rule:** Always prefix custom tables with a game-specific prefix (e.g., `q_moves`, `qttt_board`) or use unambiguous names that couldn't conflict with BGA internals.
+**Rule:** prefix every custom table with a game-specific tag (e.g., `mygame_moves`, `mygame_board`). Never use these reserved names: `moves`, `player`, `global`, `stats`, `gamelog`, `replaysavepoint`, or anything starting with `bga_`. Collisions cause `CREATE TABLE IF NOT EXISTS` to silently no-op — see `TECHNICAL_NOTES.md` for the mechanism.
 
 ---
 
 ## dbmodel.sql — No SQL Comments At All
 
-**Critical rule:** Write **zero SQL comments** inside `dbmodel.sql` — no `--` comments anywhere in the file, not before statements, not between columns, not after the semicolon.
+**Critical rule:** write **zero `--` comments** inside `dbmodel.sql` — anywhere in the file. Document the schema in a separate Markdown file (e.g., `SCHEMA.md`) instead. See `TECHNICAL_NOTES.md` for why (BGA collapses newlines before sending the file to MySQL, turning any `--` into a comment that eats the rest of the file).
 
-BGA strips newlines from `dbmodel.sql` before executing SQL. Any `--` comment, even on its own line, becomes an end-of-line comment that silently truncates everything that follows it on the collapsed single line.
-
-**Safe pattern — no comments, self-documenting column names only:**
+**Safe pattern — self-documenting column names, no comments:**
 ```sql
-CREATE TABLE IF NOT EXISTS `q_moves` (
+CREATE TABLE IF NOT EXISTS `mygame_moves` (
   `move_number`  INT(3)  NOT NULL,
   `player_id`    INT(10) NOT NULL,
-  `square1`      INT(2)  NOT NULL,
-  `square2`      INT(2)  NOT NULL,
-  `collapsed_to` INT(2)  DEFAULT NULL,
+  `from_position` INT(2)  NOT NULL,
+  `to_position`   INT(2)  NOT NULL,
   PRIMARY KEY (`move_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
-
-If you need to document the schema, do it in a separate Markdown file (e.g., `SCHEMA.md`) — never inside `dbmodel.sql`. See `TECHNICAL_NOTES.md` for the full explanation.
 
 ---
 
@@ -652,11 +636,9 @@ If you need to document the schema, do it in a separate Markdown file (e.g., `SC
 `dbmodel.sql` runs **once per new game table instance** (when `setupNewGame` is called). `CREATE TABLE IF NOT EXISTS` will silently skip if a table already exists with a wrong schema.
 
 **When the schema is wrong on an existing table:**
-1. Quit **all** game table instances — either manually via the browser, or programmatically from the game page using `gameui.ajaxcall('/table/table/quitgame.html', {table: N, neutralized: true}, gameui, ok, err)`
+1. Quit **all** game table instances — manually in the browser, or programmatically from the game page (see 3.5b)
 2. Create a fresh table — the correct `dbmodel.sql` will be applied
-3. If the table name conflicts with a BGA internal table, rename it (e.g., `moves` → `q_moves`) and redeploy before creating the fresh table
-
-**Programmatic quit works** from the game page via `gameui.ajaxcall` (which adds the CSRF token automatically). Direct `fetch()` fails due to CSRF. The `mainsite` global is available on the lobby page, `gameui` on the game page.
+3. If the table name conflicts with a BGA internal table, rename it (e.g., `moves` → `mygame_moves`) and redeploy before creating the fresh table
 
 ---
 
