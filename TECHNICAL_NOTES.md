@@ -38,10 +38,10 @@ MySQL sees `-- first column  \`b\` INT ...` as a single-line comment, eating `b`
 
 ```php
 // This query:
-$rows = $this->getCollectionFromDb("SELECT square1, square2 FROM q_moves");
-// Returns: ['0' => ['square1'=>'0','square2'=>'4'], '0' => ['square1'=>'0','square2'=>'8']]
-//                                                         ^-- overwrites the first row!
-// Actual result: only one row with square1=0 survives.
+$rows = $this->getCollectionFromDb("SELECT from_position, to_position FROM mygame_moves");
+// Returns: ['0' => ['from_position'=>'0','to_position'=>'4'], '0' => ['from_position'=>'0','to_position'=>'8']]
+//                                                                    ^-- overwrites the first row!
+// Actual result: only one row with from_position=0 survives.
 ```
 
 If two rows share the same value in the first column, the later row silently overwrites the earlier one. The array has fewer entries than expected, with no error or warning.
@@ -49,7 +49,7 @@ If two rows share the same value in the first column, the later row silently ove
 **Fix:** always put a unique column first:
 
 ```php
-$rows = $this->getCollectionFromDb("SELECT move_number, square1, square2 FROM q_moves");
+$rows = $this->getCollectionFromDb("SELECT move_number, from_position, to_position FROM mygame_moves");
 // Returns: ['1' => [...], '2' => [...], '3' => [...]]  — all rows preserved
 ```
 
@@ -63,7 +63,7 @@ BGA creates several internal tables per game instance at table-creation time. Th
 
 Known BGA-managed tables to avoid: `moves`, `player`, `global`, `stats`, `gamelog`.
 
-**Fix:** prefix with game name or use unambiguous names: `q_moves`, `qttt_board`, `mygame_tiles`, etc.
+**Fix:** prefix with game name or use unambiguous names: `mygame_moves`, `mygame_board`, `mygame_tiles`, etc.
 
 ---
 
