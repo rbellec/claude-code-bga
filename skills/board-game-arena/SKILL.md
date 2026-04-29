@@ -465,7 +465,7 @@ mcp__claude-in-chrome__navigate(tabId, url: "https://studio.boardgamearena.com/1
 
 ### 3.5b Quitting a table programmatically
 
-From the **game page** (not lobby), use `gameui.ajaxcall`:
+From the **game page** (not lobby), use `gameui.ajaxcall` — it attaches the CSRF token automatically, while raw `fetch()` is rejected:
 
 ```javascript
 gameui.ajaxcall('/table/table/quitgame.html', {table: TABLE_ID, neutralized: true, s: 'table_quitgame'}, gameui,
@@ -474,7 +474,7 @@ gameui.ajaxcall('/table/table/quitgame.html', {table: TABLE_ID, neutralized: tru
 );
 ```
 
-Note: `mainsite` is not defined on game pages — use `gameui` instead. Direct `fetch()` fails (CSRF), but `gameui.ajaxcall` adds the token automatically.
+On the lobby page use `mainsite` instead of `gameui`. See `TECHNICAL_NOTES.md` for the *why*.
 
 ### 3.6 Read errors
 
@@ -629,11 +629,9 @@ If you need to document the schema, do it in a separate Markdown file (e.g., `SC
 `dbmodel.sql` runs **once per new game table instance** (when `setupNewGame` is called). `CREATE TABLE IF NOT EXISTS` will silently skip if a table already exists with a wrong schema.
 
 **When the schema is wrong on an existing table:**
-1. Quit **all** game table instances — either manually via the browser, or programmatically from the game page using `gameui.ajaxcall('/table/table/quitgame.html', {table: N, neutralized: true}, gameui, ok, err)`
+1. Quit **all** game table instances — manually in the browser, or programmatically from the game page (see 3.5b)
 2. Create a fresh table — the correct `dbmodel.sql` will be applied
 3. If the table name conflicts with a BGA internal table, rename it (e.g., `moves` → `mygame_moves`) and redeploy before creating the fresh table
-
-**Programmatic quit works** from the game page via `gameui.ajaxcall` (which adds the CSRF token automatically). Direct `fetch()` fails due to CSRF. The `mainsite` global is available on the lobby page, `gameui` on the game page.
 
 ---
 

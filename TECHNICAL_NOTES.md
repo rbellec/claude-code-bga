@@ -67,13 +67,17 @@ Known BGA-managed tables to avoid: `moves`, `player`, `global`, `stats`, `gamelo
 
 ---
 
-## Why programmatic quit of game tables fails
+## Why programmatic quit must use `gameui.ajaxcall`
 
-BGA's table lobby uses Svelte + a CSRF token bound to the Svelte session. Actions like quitting a table require a valid CSRF token that is not accessible from injected JavaScript (`dojo.xhrPost`, `fetch`, etc.).
+BGA protects state-changing endpoints (like `quitgame.html`) with a CSRF token bound to the user session. The token is not visible from injected JavaScript, so a direct `fetch()` or `dojo.xhrPost()` is rejected.
 
-Consequence: you cannot quit a game table programmatically from Claude in Chrome. The user must click the Quit or "Express stop" button manually in the browser.
+`gameui.ajaxcall(...)`, available on game pages, automatically attaches the CSRF token from the page context, so it succeeds where raw `fetch()` fails.
 
-Workaround: BGA also auto-abandons broken tables after a timeout (a few minutes if `setupNewGame` fails repeatedly). For schema bugs, it is often faster to wait or ask the user to manually quit.
+Two consequences:
+- The call must be issued from the **game page** (`/1/GAME_NAME?table=N`), not from the lobby. On the lobby page `gameui` is undefined; the equivalent is `mainsite`.
+- It must be issued from the browser context (Claude in Chrome `javascript_tool`), not from a Node/curl script — the token lives in the page session.
+
+If the game page is not reachable (e.g., `setupNewGame` crashes before the page loads), fall back to manually clicking Quit in the browser, or wait for BGA's auto-abandon timeout (a few minutes after repeated `setupNewGame` failures).
 
 ---
 
