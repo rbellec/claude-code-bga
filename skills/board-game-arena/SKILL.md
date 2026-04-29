@@ -141,7 +141,7 @@ class Game extends Table
 
 **Critical `Game.php` rules:**
 - Namespace: `Bga\Games\GameName` — **PascalCase**, matching the scaffold (not lowercase)
-- **Constants:** use `public const` in Game.php, NOT `define()` in `material.inc.php`. `define()` creates global constants that are invisible inside the game's namespace. Reference as `self::MY_CONST` in Game.php, `Game::MY_CONST` in States.
+- **Constants:** declare as `public const` on the `Game` class, NOT `define()` in `material.inc.php`. Reference as `self::MY_CONST` in Game.php, `Game::MY_CONST` in States. (See `TECHNICAL_NOTES.md` for why `define()` breaks under namespaces.)
 - **Globals:** use `$this->bga->globals->set/get` (any type, JSON-serialized). `initGameStateLabels` is legacy and **int-only** — these are two distinct systems, do not mix them
 - `material.inc.php` is auto-included by the framework — **never** `include()` it manually
 - No `self::` on instance methods — PHP 8.4 generates warnings that corrupt JSON output. Use `$this->` everywhere. (`self::CONST` for class constants is fine)
@@ -597,19 +597,15 @@ Array.from(document.querySelectorAll('a')).find(a => a.href.match(/lobby\?game=\
 
 ## BGA Framework — Table Name Conflicts
 
-Reserved names — BGA creates these before `dbmodel.sql` runs, so `CREATE TABLE IF NOT EXISTS` silently no-ops and your custom columns are lost: `player`, `global`, `stats`, `gamelog`, `replaysavepoint`, plus anything starting with `bga_` (`bga_globals`, `bga_user_preferences`, `bga_player_counters`, …).
-
-**Rule:** prefix custom tables with a game-specific prefix (e.g., `mygame_moves`, `mygame_board`).
+**Rule:** prefix every custom table with a game-specific tag (e.g., `mygame_moves`, `mygame_board`). Never use these reserved names: `moves`, `player`, `global`, `stats`, `gamelog`, `replaysavepoint`, or anything starting with `bga_`. Collisions cause `CREATE TABLE IF NOT EXISTS` to silently no-op — see `TECHNICAL_NOTES.md` for the mechanism.
 
 ---
 
 ## dbmodel.sql — No SQL Comments At All
 
-**Critical rule:** Write **zero SQL comments** inside `dbmodel.sql` — no `--` comments anywhere in the file, not before statements, not between columns, not after the semicolon.
+**Critical rule:** write **zero `--` comments** inside `dbmodel.sql` — anywhere in the file. Document the schema in a separate Markdown file (e.g., `SCHEMA.md`) instead. See `TECHNICAL_NOTES.md` for why (BGA collapses newlines before sending the file to MySQL, turning any `--` into a comment that eats the rest of the file).
 
-BGA strips newlines from `dbmodel.sql` before executing SQL. Any `--` comment, even on its own line, becomes an end-of-line comment that silently truncates everything that follows it on the collapsed single line.
-
-**Safe pattern — no comments, self-documenting column names only:**
+**Safe pattern — self-documenting column names, no comments:**
 ```sql
 CREATE TABLE IF NOT EXISTS `mygame_moves` (
   `move_number`  INT(3)  NOT NULL,
@@ -619,8 +615,6 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
   PRIMARY KEY (`move_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
-
-If you need to document the schema, do it in a separate Markdown file (e.g., `SCHEMA.md`) — never inside `dbmodel.sql`. See `TECHNICAL_NOTES.md` for the full explanation.
 
 ---
 

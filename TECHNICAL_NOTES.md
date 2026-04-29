@@ -57,13 +57,21 @@ $rows = $this->getCollectionFromDb("SELECT move_number, from_position, to_positi
 
 ---
 
-## Why never name a custom table `moves`
+## Why custom tables must use a game-specific prefix
 
-BGA creates several internal tables per game instance at table-creation time. The internal schema for a `moves` table (if it exists) has different columns than any game-specific moves table. `CREATE TABLE IF NOT EXISTS` silently succeeds without creating the correct schema — the BGA internal table already satisfies the `IF NOT EXISTS` check.
+BGA creates its own internal tables for every new game instance, **before** `dbmodel.sql` runs. If your `dbmodel.sql` declares a table that collides with one of these names, `CREATE TABLE IF NOT EXISTS` reports success but creates nothing — the BGA-managed table already satisfies the `IF NOT EXISTS` check, so your columns are silently dropped on the floor. The first symptom is a runtime error like `Unknown column 'X' in 'field list'`.
 
-Known BGA-managed tables to avoid: `moves`, `player`, `global`, `stats`, `gamelog`.
+Known reserved names (non-exhaustive): `moves`, `player`, `global`, `stats`, `gamelog`, `replaysavepoint`, plus anything starting with `bga_` (`bga_globals`, `bga_user_preferences`, `bga_player_counters`, …).
 
-**Fix:** prefix with game name or use unambiguous names: `mygame_moves`, `mygame_board`, `mygame_tiles`, etc.
+**Fix:** prefix every custom table with a game-specific tag — `mygame_moves`, `mygame_board`, `mygame_tiles`, etc.
+
+## Why prefer `public const` over `define()` for game constants
+
+The new BGA framework puts game code under a namespace (`Bga\Games\GameName`). PHP `define()` registers constants in the **global** namespace, which makes them invisible from inside the namespace unless qualified with a leading backslash. Class constants declared with `public const` live on the class itself and are reached via `self::MY_CONST` (inside Game.php) or `Game::MY_CONST` (from State classes), with no namespace gymnastics.
+
+A second benefit: class constants are typed and IDE-autocompleted, while `define()` produces untyped globals.
+
+**Fix:** declare game constants as `public const` on the `Game` class. Reserve `material.inc.php` for static tabular data (tile costs, deck contents) — and even there, prefer arrays of class constants when feasible.
 
 ---
 
