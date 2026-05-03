@@ -153,15 +153,21 @@ Statistics displayed at game end.
 ### PHP Usage
 
 ```php
-// In setupNewGame:
+// In setupNewGame — init takes NO playerId, runs once for all players:
 $this->bga->tableStats->init('total_rounds', 0);
-$this->bga->playerStats->init('cards_played', 0, $pid);
+$this->bga->playerStats->init('cards_played', 0);
+$this->bga->playerStats->init('avg_score_per_turn', 0);
 
-// During game:
+// During the game — inc/set DO take a playerId (required, not optional):
 $this->bga->tableStats->inc('total_rounds', 1);
 $this->bga->playerStats->inc('cards_played', 1, $pid);
 $this->bga->playerStats->set('avg_score_per_turn', $avg, $pid);
 ```
+
+> ⚠ **`PlayerStats::init` has no `$playerId`.** Signature is
+> `init($name, $value, bool $updateTableStat = false)`. Passing a player ID
+> casts to `true`, which makes the framework also try to init a same-named
+> table stat — silent crash in `setupNewGame` if none exists.
 
 ## gameinfos.inc.php
 
@@ -194,6 +200,9 @@ $gameinfos = [
     'strategy' => 3,                    // 1-5
     'diplomacy' => 1,                   // 1-5
 
+    // ⚠ Must be `false` in 2p, co-op, or frequent-ties games — the doc
+    //   forbids `true` there (ELO can't move when everyone's tied).
+    //   Misuse symptom: end-game stats show literal `LB_GAME_RESULT`.
     'losers_not_ranked' => false,       // true = "Winner" or "Loser" only
     'tie_breaker_description' => '',    // NO newlines (breaks JS)
 
