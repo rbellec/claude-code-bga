@@ -408,6 +408,7 @@ For detailed API beyond the patterns above, load the relevant reference file.
 | Config files (options, prefs, stats, gameinfos) | `references/config-files.md` | Setting up or modifying config |
 | Translations & i18n | `references/translations.md` | Adding translatable strings |
 | BGA Studio Guidelines (layout, a11y, UX) | `references/guidelines.md` | Polishing UI / preparing for review |
+| Debug helpers (`debug_<name>`, premium-gate workaround) | `references/debug-helpers.md` | Verifying state mid-game, end-game stats panel showing "Go premium" |
 | Rules clarification process | `references/rules-clarification.md` | Analyzing rules, managing author Q&A |
 
 ---
@@ -520,6 +521,13 @@ document.getElementById('debugParamDlgApply').click();
 
 **Full SQL/request logs** (best for stack traces):
 `/1/GAME_NAME/GAME_NAME/logaccess.html?table=N`
+
+**`debug_<name>` PHP helpers from the toolbar:** any `public function debug_*` on
+`Game.php` is invokable from the Studio Debug input (right of the table); output
+to the chat log via `notify->all('log', ...)`. See `references/debug-helpers.md`.
+
+**End-game stats panel says "Go premium":** click "Become premium" on your Studio
+account (free in dev), or use a `debug_dumpStats` helper to read stats live.
 
 ---
 
@@ -664,6 +672,8 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **Forbidden action parameter names**: `$args`, `$activePlayerId`, `$currentPlayerId` — reserved by framework
 - **`escapeStringForDB($str)`** — mandatory for any player-supplied string in SQL
 - **Use `clienttranslate()`** for all notification messages — literal text only, no variables inside
+- **Wrap `UserException` messages** in `clienttranslate()` — they're displayed to the player. `SystemException` / `VisibleSystemException` go to server logs and stay untranslated. See `references/translations.md` for the full i18n workflow (alpha vs beta, "Display dummy translation" debug button, raw-value-vs-translated-label pattern)
+- **`PlayerStats::init` has no `$playerId`** — signature is `init($name, $value, bool $updateTableStat = false)`. Passing a player ID silently casts to `true` and crashes `setupNewGame`. Inits all players in one call — no loop. (`inc`/`set` DO take `$playerId`.)
 
 ### JavaScript / Client
 
