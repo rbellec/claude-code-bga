@@ -68,6 +68,19 @@ BGA Studio is **SFTP-only** (no SSH shell) — rsync does not work. Use `scp` wi
 
 **→ Commit now** (Makefile + config files).
 
+### 1.3b Optional: PHP code quality loop
+
+For users comfortable with PHP tooling, the skill can layer four quality tools on top of `make check`:
+
+- **PHP-CS-Fixer** (auto-apply) — formatting drift
+- **Rector** with `code-quality` + `dead-code` (auto-apply) — mechanical simplifications
+- **PHPStan** at level max — type inference, undefined methods
+- **PHPMD** — complexity / unused params / design smells
+
+Together they form a `make audit` target — a local "PR review" loop, read-only, ~10 s. Tools install once into a shared `~/.bga-tools/` Composer toolbox (no per-project re-install). The audit is **not gated on deploy** — quality is advisory, never blocks a session push.
+
+**Skip this section if you're not comfortable with PHP tooling — the skill works fine without it.** If you want it, see `references/php-code-quality.md` for the full setup (toolbox install, four config files, stubs for the BGA framework, baseline workflow, and an opt-in pre-commit hook).
+
 ### 1.4 Rules analysis and author clarification
 
 Before writing game logic, convert the rulebook to Markdown and analyze it systematically. This surfaces ambiguities that a program cannot resolve by "common sense" the way a human player would.
@@ -99,8 +112,6 @@ use Bga\GameFramework\Table;
 
 class Game extends Table
 {
-    // Game constants — prefer class constants over define() in material.inc.php
-    // (define() creates globals invisible inside the namespace)
     public const MY_CONSTANT = 1;
 
     public function __construct() {
@@ -196,7 +207,7 @@ class PlayerTurn extends GameState
 
 **Critical state rules:**
 - State constructor takes ONLY `id` and `type` — no name, description, or transitions
-- Act methods return the **next state class** (e.g., `return ResolveEyes::class`)
+- Act methods return the **next state class** (e.g., `return ResolveAction::class`)
 - This applies to BOTH `ACTIVE_PLAYER` and `MULTIPLE_ACTIVE_PLAYER` states
 - For `MULTIPLE_ACTIVE_PLAYER`: the framework automatically waits for all players when the action returns a state class
 - **Never** use `setPlayerNonMultiactive($id, 'transitionName')` — transition names don't exist in the new framework
@@ -487,10 +498,7 @@ mcp__claude-in-chrome__read_console_messages(tabId, pattern: "error|Error|fatal"
 | No messages | Game launched successfully |
 | `JSON_ERROR_SYNTAX` + fatal PHP | PHP error — read message after `<b>Fatal error</b>` |
 | `JSON_ERROR_SYNTAX` + warning | PHP warning corrupting JSON — read the warning |
-| `reflexion_time cannot be initialized` | `initGameStateLabels` in constructor, or double `include()` of `material.inc.php` |
-| `This transition (X) is impossible` | Used `setPlayerNonMultiactive(id, 'name')` — return state class instead |
-| `Unknown statistic id` | Reload statistics via Manage Game panel |
-| `Invalid id for state class` | Scaffold state files still on server — delete them via SFTP |
+| Any other error string | Look it up in **Common Initial Errors** below for the fix |
 
 ### 3.7 Fix → repeat from 3.2
 
@@ -582,14 +590,14 @@ Array.from(document.querySelectorAll('a')).find(a => a.href.match(/lobby\?game=\
 | Error | Fix |
 |-------|-----|
 | `reflexion_time cannot be initialized` | Move `initGameStateLabels` from constructor to `initTable()` |
-| `Constant X already defined` | Add `defined('X') \|\|` guard before every `define()` in `material.inc.php` |
+| `Constant X already defined` | Migrate to `public const` on the `Game` class (see 2.1). For legacy code that must keep `define()`, guard each one: `defined('X') \|\| define('X', …)` |
 | `Access level must be public` | `getAllDatas`, `getGameProgression` must be `public` |
 | `Invalid id for state class` | Delete scaffold state files from server via SFTP |
 | `Unknown statistic id` | Reload statistics via BGA Studio manage panel |
 | `This transition (X) is impossible` | Return state class from act method instead of calling `setPlayerNonMultiactive(id, 'name')` |
 | `too many authentication failures` | Add `-o IdentitiesOnly=yes` to SSH/SCP commands |
 | Scores not showing at game end | Write scores with `$this->bga->playerScore->set($pid, $score)` in state 98, not state 99 |
-| `Unknown column 'X' in 'field list'` | Check (a) inline `--` comments in `dbmodel.sql` (truncate the column list — see "No SQL Comments"); (b) the table was created from an older `dbmodel.sql` (BGA does not auto-migrate — quit all tables and start fresh); (c) the name is reserved (see "Table Name Conflicts" — `IF NOT EXISTS` silently no-ops). |
+| `Unknown column 'X' in 'field list'` | Check (a) inline `--` comments in `dbmodel.sql` (see "No SQL Comments"); (b) the table was created from an older `dbmodel.sql` — BGA does not auto-migrate (see "BGA Schema Changes During Development"); (c) the name is reserved (see "Table Name Conflicts"). |
 | `static::DbQuery` or `self::DbQuery` | PHP 8.4 warns on static calls to instance methods, corrupting JSON. Always use `$this->DbQuery(...)`. Same applies to all other DB helpers. |
 | Logic bug: graph/query silently missing rows | `getCollectionFromDb()` uses the **first selected column** as the PHP array key — duplicate values silently overwrite each other. Always put a unique column (e.g., `id`, `move_number`) first: `SELECT move_number, from_position, to_position FROM ...` not `SELECT from_position, to_position FROM ...`. |
 
@@ -645,18 +653,16 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **DB integers return as strings** — always cast: `(int)$row['value']`
 - **Use `bga_rand(min, max)`** for dice/random — `rand()` and `mt_rand()` forbidden in review
 - **Never use TRUNCATE or DROP** — they do implicit commits that break BGA's transaction rollback
-- **Never call `getCurrentPlayerId()`** in `setupNewGame()`, `zombieTurn()`, or args methods — causes "Not logged" errors
-- **Cannot change active player** inside ACTIVE_PLAYER states — use a GAME-type state for that
+- **Never call `getCurrentPlayerId()`** in `setupNewGame()` or args methods — causes "Not logged" errors. (For `zombieTurn()`, see Zombie handling below.)
+- **Active player can only change in GAME-type states** — `activeNextPlayer()` / `changeActivePlayer()` are no-ops inside ACTIVE_PLAYER states
 - **Args methods must return arrays** — never int/string, never modify DB in args
 - **At least one notification per action** is required (state transitions count)
 - **Notification size limit**: 128KB total across bundled requests
-- **`getCollectionFromDb()` uses first column as array key** — duplicate values silently overwrite. Always put a unique column first.
+- **`getObjectListFromDB($sql)`** returns a simple array — use it instead of `getCollectionFromDb` when the first selected column may have duplicates (see Common Initial Errors for the keying pitfall)
 - **String comparison**: use `===` not `==` — hex colors like `'4baae2'` miscast with `==`
 - **Action autowiring** (new framework): `#[PossibleAction]` + typed parameters = no action.php needed
 - **Forbidden action parameter names**: `$args`, `$activePlayerId`, `$currentPlayerId` — reserved by framework
 - **`escapeStringForDB($str)`** — mandatory for any player-supplied string in SQL
-- **`getObjectListFromDB($sql)`** — simple array (no key issues); use instead of `getCollectionFromDb` when first column may have duplicates
-- **`activeNextPlayer()` / `changeActivePlayer()`** — only works in GAME-type states, not ACTIVE_PLAYER
 - **Use `clienttranslate()`** for all notification messages — literal text only, no variables inside
 
 ### JavaScript / Client

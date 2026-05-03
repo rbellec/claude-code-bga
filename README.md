@@ -44,6 +44,10 @@ ln -s "$PWD/claude-code-bga/skills/board-game-arena" ~/.claude/skills/board-game
 
 Claude Code will use the skill to handle the BGA-specific setup (Makefile, config files, state machine, deploy workflow) and the browser extension to test directly on BGA Studio.
 
+### Optional: PHP code quality loop (advanced)
+
+If you're comfortable with PHP tooling, the skill includes an optional quality loop that runs PHP-CS-Fixer, Rector, PHPStan (level max), and PHPMD on every commit. Read-only by default, ~10 s per run, installed once into a shared `~/.bga-tools/` toolbox. See [`references/php-code-quality.md`](skills/board-game-arena/references/php-code-quality.md) for the full setup. **Skip this if you're not comfortable installing PHP dev tools** — the skill works fine without it.
+
 ### Optional: skip permission prompts for git/make/scp
 
 The skill commits automatically at each milestone and deploys via `scp`/`make`. To avoid confirmation prompts, add to your `.claude/settings.local.json` (not committed):
@@ -62,6 +66,7 @@ The skill commits automatically at each milestone and deploys via `scp`/`make`. 
 - BGA new framework patterns (PHP 8.4, state classes, notifications, globals)
 - JavaScript client structure (ES6 modules, state handlers)
 - **BGA library references** — detailed guides for Deck, BgaCards, Stock, Counter, Scrollmap, and 10 other BGA framework libraries, loaded on demand to keep context usage low (see [`skills/board-game-arena/references/`](skills/board-game-arena/references/))
+- **Optional PHP code quality loop** — PHP-CS-Fixer, Rector, PHPStan (level max), PHPMD wired as `make audit`. See [`references/php-code-quality.md`](skills/board-game-arena/references/php-code-quality.md).
 - Automated deploy-test loop via Chrome extension
 - Known BGA pitfalls and how to avoid them (SQL comments, table names, DB query gotchas)
 
@@ -83,9 +88,10 @@ See [`TECHNICAL_NOTES.md`](TECHNICAL_NOTES.md) for the *why* behind each rule.
 - [Duelly](https://github.com/rbellec/bga_duelly) — adaptation in progress
 - [Renartefact](https://github.com/rbellec/bga_renartefact) — adaptation in progress
 
-## Article
+## Articles
 
-A detailed write-up of the methodology and lessons learned is coming soon.
+- **Article 1** *(in progress)* — methodology and lessons learned from adapting a board game with Claude Code.
+- **Article 2** *(planned)* — the optional PHP quality loop in detail: setup, tuning for BGA-specific code, and a real first-run audit on a vanilla project.
 
 ## License
 
