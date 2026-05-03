@@ -658,6 +658,7 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **`getObjectListFromDB($sql)`** — simple array (no key issues); use instead of `getCollectionFromDb` when first column may have duplicates
 - **`activeNextPlayer()` / `changeActivePlayer()`** — only works in GAME-type states, not ACTIVE_PLAYER
 - **Use `clienttranslate()`** for all notification messages — literal text only, no variables inside
+- **Wrap `UserException` messages** in `clienttranslate()` — they're displayed to the player. `SystemException` / `VisibleSystemException` go to server logs and stay untranslated. See `references/translations.md` for the full i18n workflow (alpha vs beta, "Display dummy translation" debug button, raw-value-vs-translated-label pattern)
 
 ### JavaScript / Client
 
