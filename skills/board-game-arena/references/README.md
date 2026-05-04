@@ -16,6 +16,7 @@ These files are designed to be loaded on demand by Claude Code when implementing
 | Guidelines | [guidelines.md](guidelines.md) | BGA Studio review standards: layout, accessibility, UX, design |
 | Debug Helpers | [debug-helpers.md](debug-helpers.md) | `debug_<name>` toolbar methods, premium-gate workaround for end-game stats |
 | Makefile Template | [makefile-template.md](makefile-template.md) | Project setup: check + deploy targets (used once at init) |
+| BGG Submission | [bgg-submission.md](bgg-submission.md) | Producing the BGG entry that unlocks `bgg_id` (used once at release, optional) |
 
 ## PHP (Server-side)
 

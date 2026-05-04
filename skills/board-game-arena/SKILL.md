@@ -410,6 +410,7 @@ For detailed API beyond the patterns above, load the relevant reference file.
 | BGA Studio Guidelines (layout, a11y, UX) | `references/guidelines.md` | Polishing UI / preparing for review |
 | Debug helpers (`debug_<name>`, premium-gate workaround) | `references/debug-helpers.md` | Verifying state mid-game, end-game stats panel showing "Go premium" |
 | Rules clarification process | `references/rules-clarification.md` | Analyzing rules, managing author Q&A |
+| BGG submission helper | `references/bgg-submission.md` | Producing the BGG entry that unlocks `bgg_id` (post-release, optional) |
 
 ---
 
@@ -577,7 +578,7 @@ After first deploy, BGA Studio may show these warnings — they are non-blocking
 | Warning | Fix |
 |---------|-----|
 | "This game doesn't have a description" | Fill in the Game Metadata Manager on BGA Studio (UI, not code) |
-| "This game doesn't have a valid BGG_ID" | Set `'bgg_id' => 0` in `gameinfos.inc.php` if no BGG page exists yet. Then reload game informations. |
+| "This game doesn't have a valid BGG_ID" | Set `'bgg_id' => 0` in `gameinfos.inc.php` until a BGG page exists. Then reload game informations. When ready to publish, see `references/bgg-submission.md`. |
 
 ---
 
