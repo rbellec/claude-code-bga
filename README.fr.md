@@ -2,6 +2,8 @@
 
 Un skill [Claude Code](https://claude.ai/claude-code) pour développer des jeux sur [Board Game Arena](https://studio.boardgamearena.com) Studio — des règles publiées à un jeu jouable.
 
+> **Lire l'article →** [Implémenter un jeu de société sur BGA avec Claude Code](https://rbellec.github.io/blog/posts/skill-claude-code-bga/)
+
 Distribué à la fois comme **plugin Claude Code** et comme **package Vercel `skills`** — choisissez la méthode qui vous convient.
 
 ## Installation
@@ -82,10 +84,6 @@ Voir [`TECHNICAL_NOTES.md`](TECHNICAL_NOTES.md) pour le *pourquoi* derrière cha
 - Visite Royale / Royal Visit — jeu de cartes, mécaniques de tir à la corde *(le repo sera rendu public une fois la licence de l'éditeur obtenue)*
 - [Duelly](https://github.com/rbellec/bga_duelly) — adaptation en cours
 - [Renartefact](https://github.com/rbellec/bga_renartefact) — adaptation en cours
-
-## Article
-
-Un article détaillé sur la méthodologie et les leçons apprises arrive bientôt.
 
 ## Licence
 

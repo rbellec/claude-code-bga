@@ -2,6 +2,8 @@
 
 A [Claude Code](https://claude.ai/claude-code) skill for developing board games on [Board Game Arena](https://studio.boardgamearena.com) Studio — from published rules to a playable game.
 
+> **Read the write-up →** [Implementing a board game on BGA with Claude Code](https://rbellec.github.io/blog/en/posts/skill-claude-code-bga/)
+
 Distributed as both a **Claude Code plugin** and a **Vercel `skills` package** — pick whichever fits your setup.
 
 ## Install
@@ -87,11 +89,6 @@ See [`TECHNICAL_NOTES.md`](TECHNICAL_NOTES.md) for the *why* behind each rule.
 - Visite Royale / Royal Visit — card game, tug-of-war mechanics *(repo will be made public once the publisher license is granted)*
 - [Duelly](https://github.com/rbellec/bga_duelly) — adaptation in progress
 - [Renartefact](https://github.com/rbellec/bga_renartefact) — adaptation in progress
-
-## Articles
-
-- **Article 1** *(in progress)* — methodology and lessons learned from adapting a board game with Claude Code.
-- **Article 2** *(planned)* — the optional PHP quality loop in detail: setup, tuning for BGA-specific code, and a real first-run audit on a vanilla project.
 
 ## License
 
