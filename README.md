@@ -48,7 +48,7 @@ Claude Code will use the skill to handle the BGA-specific setup (Makefile, confi
 
 ### Optional: PHP code quality loop (advanced)
 
-If you're comfortable with PHP tooling, the skill includes an optional quality loop that runs PHP-CS-Fixer, Rector, PHPStan (level max), and PHPMD on every commit. Read-only by default, ~10 s per run, installed once into a shared `~/.bga-tools/` toolbox. See [`references/php-code-quality.md`](skills/board-game-arena/references/php-code-quality.md) for the full setup. **Skip this if you're not comfortable installing PHP dev tools** — the skill works fine without it.
+If you're comfortable with PHP tooling, the skill includes an optional quality loop wiring PHP-CS-Fixer, Rector, PHPStan (level max), and PHPMD as a read-only `make audit` target you run before committing (an opt-in pre-commit hook is available). ~10 s per run, installed once into a shared `~/.bga-tools/` toolbox. See [`references/php-code-quality.md`](skills/board-game-arena/references/php-code-quality.md) for the full setup. **Skip this if you're not comfortable installing PHP dev tools** — the skill works fine without it.
 
 ### Optional: skip permission prompts for git/make/scp
 

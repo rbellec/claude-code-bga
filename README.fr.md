@@ -46,6 +46,10 @@ ln -s "$PWD/claude-code-bga/skills/board-game-arena" ~/.claude/skills/board-game
 
 Claude Code utilisera le skill pour gérer la configuration BGA (Makefile, fichiers de config, machine à états, workflow de déploiement) et l'extension navigateur pour tester directement sur BGA Studio.
 
+### Optionnel : boucle qualité PHP (avancé)
+
+Si vous êtes à l'aise avec l'outillage PHP, le skill inclut une boucle qualité optionnelle qui câble PHP-CS-Fixer, Rector, PHPStan (niveau max) et PHPMD dans une cible `make audit` en lecture seule, à lancer avant de commiter (un hook pre-commit opt-in est disponible). ~10 s par exécution, installation unique dans une boîte à outils partagée `~/.bga-tools/`. Voir [`references/php-code-quality.md`](skills/board-game-arena/references/php-code-quality.md) pour la mise en place complète. **Passez cette section si installer des outils de dev PHP ne vous dit rien** — le skill fonctionne très bien sans.
+
 ### Optionnel : autoriser git/make/scp sans confirmation
 
 Le skill commite automatiquement à chaque étape et déploie via `scp`/`make`. Pour éviter les demandes de confirmation, ajoutez dans votre `.claude/settings.local.json` (non commité) :
@@ -64,6 +68,7 @@ Le skill commite automatiquement à chaque étape et déploie via `scp`/`make`. 
 - Patterns du nouveau framework BGA (PHP 8.4, classes d'état, notifications, globales)
 - Structure du client JavaScript (modules ES6, gestionnaires d'état)
 - **Références des librairies BGA** — guides détaillés pour Deck, BgaCards, Stock, Counter, Scrollmap, et 10 autres librairies du framework BGA, chargées à la demande pour économiser le contexte (voir [`skills/board-game-arena/references/`](skills/board-game-arena/references/))
+- **Boucle qualité PHP optionnelle** — PHP-CS-Fixer, Rector, PHPStan (niveau max), PHPMD câblés en `make audit`. Voir [`references/php-code-quality.md`](skills/board-game-arena/references/php-code-quality.md).
 - Boucle deploy-test automatisée via l'extension Chrome
 - Pièges connus de BGA et comment les éviter (commentaires SQL, noms de tables, problèmes de requêtes DB)
 
