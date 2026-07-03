@@ -42,10 +42,10 @@ this.bga.players.getCurrentPlayerId()        // viewing player's ID
 this.bga.players.isCurrentPlayerActive()      // is it this player's turn?
 this.bga.players.isCurrentPlayerSpectator()   // read-only viewer
 this.bga.players.getFormattedPlayerName(pid)  // HTML with color
-this.bga.players.getPlayer(pid)               // player data object
+this.bga.players.getPlayerById(pid)           // player data object (also getCurrentPlayer, getActivePlayer)
 this.bga.players.getActivePlayerId()          // single active player
 this.bga.players.getActivePlayerIds()         // array (multiactive)
-this.bga.gameui.getPlayerAvatarUrl(pid, 50)   // sizes: 32, 50, 92, 184
+this.bga.players.getPlayerAvatarUrl(pid, 50)  // sizes: 32, 50, 92, 184
 
 // Read-only detection (spectator, replay, archive)
 const isReadOnly = this.bga.players.isCurrentPlayerSpectator()
@@ -109,11 +109,14 @@ this.bga.statusBar.addActionButton(
     {
         color: 'primary',    // 'primary' (blue), 'secondary' (gray), 'alert' (red)
         id: 'playBtn',       // DOM id
+        classes: 'mygame-btn', // extra CSS classes
         disabled: false,     // grayed out
-        confirm: _('Are you sure?'), // confirmation dialog
-        tooltip: _('Play your selected card'),
+        title: _('Play your selected card'), // hover title
+        // destination: element — place the button elsewhere than the status bar
     }
 );
+// For a confirmation step, use this.bga.dialogs.confirmation() in the callback
+// — addActionButton has no documented 'confirm' or 'tooltip' option.
 
 // Status bar title
 this.bga.statusBar.setTitle(_('${you} must choose a card'), {});

@@ -19,12 +19,17 @@ this.scoreSheet = new BgaScoreSheet.ScoreSheet(
         entryLabelHeight: 30,
         players: gamedatas.players,
         entries: [
-            { name: 'buildings', label: 'Buildings' },
-            { name: 'cards', label: 'Cards' },
-            { name: 'bonus', label: 'Bonus' },
-            { name: 'total', label: 'Total', isBold: true },
+            // 'property' must match the keys of the score data objects
+            { property: 'buildings', label: 'Buildings' },
+            { property: 'cards', label: 'Cards' },
+            { property: 'bonus', label: 'Bonus' },
+            { property: 'total', label: 'Total', labelClasses: 'mygame-score-total', scoresClasses: 'mygame-score-total' },
         ],
         scores: gamedatas.endScores, // null if game not finished
+        classes: 'mygame-score-sheet',                    // optional CSS classes on the sheet
+        onScoreDisplayed: (property, playerId, score) => {
+            // called after each score cell finishes animating
+        },
     }
 );
 ```
@@ -59,6 +64,7 @@ async notif_gameEnd(args) {
 
 ## Pitfalls
 
-- **`onScoreDisplayed` callback** — use for post-animation logic
+- **Entry field is `property`, not `name`** — it must match the score-data keys exactly, or cells stay empty
+- **No `isBold` option** — style via `labelClasses` / `scoresClasses` (per entry) or `classes` (whole sheet)
 - **Respects replay settings** — animations auto-skip in replay mode
 - **Semantic versioning** — use `'1.x'` for stability
