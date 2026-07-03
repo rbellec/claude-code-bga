@@ -12,6 +12,8 @@ These files are designed to be loaded on demand by Claude Code when implementing
 | PHP Framework | [php-framework.md](php-framework.md) | Full PHP server API (DB, players, states, scoring, undo, random) |
 | Notifications | [notifications.md](notifications.md) | Complete notification system (PHP send + JS receive + sync) |
 | Config Files | [config-files.md](config-files.md) | gameoptions.json, gamepreferences.json, stats.json, gameinfos.inc.php |
+| Gameinfos JSONC | [gameinfos-jsonc.md](gameinfos-jsonc.md) | `gameinfos.jsonc` format (2026+ scaffolds), correspondence with legacy `.inc.php` |
+| Legacy Migration | [legacy-migration.md](legacy-migration.md) | Converting a pre-2025 project to the new framework (files, PHP, JS, order) |
 | Translations | [translations.md](translations.md) | i18n patterns: clienttranslate, _(), i18n array, bga_format |
 | Guidelines | [guidelines.md](guidelines.md) | BGA Studio review standards: layout, accessibility, UX, design |
 | Debug Helpers | [debug-helpers.md](debug-helpers.md) | `debug_<name>` toolbar methods, premium-gate workaround for end-game stats |

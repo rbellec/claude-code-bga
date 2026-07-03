@@ -380,7 +380,7 @@ For full format details, see `references/config-files.md`.
 }
 ```
 
-**gameinfos.inc.php** — essential fields:
+**gameinfos.inc.php** — essential fields (⚠ recent scaffolds generate **`gameinfos.jsonc`** instead — check which file the scaffold contains; see `references/gameinfos-jsonc.md`):
 ```php
 $gameinfos = [
     'players' => [2, 3, 4],
@@ -406,6 +406,8 @@ For detailed API beyond the patterns above, load the relevant reference file.
 | PHP full API (DB, players, states, scoring, undo) | `references/php-framework.md` | Advanced game logic |
 | Notification system (PHP + JS) | `references/notifications.md` | Custom notification handling |
 | Config files (options, prefs, stats, gameinfos) | `references/config-files.md` | Setting up or modifying config |
+| Game metadata `gameinfos.jsonc` (2026+ scaffolds) | `references/gameinfos-jsonc.md` | Editing metadata on a recent project, or converting `gameinfos.inc.php` |
+| Legacy → new framework migration | `references/legacy-migration.md` | Taking over a pre-2025 project (`.game.php`, `states.inc.php`, `.action.php`, Dojo JS) |
 | Translations & i18n | `references/translations.md` | Adding translatable strings |
 | BGA Studio Guidelines (layout, a11y, UX) | `references/guidelines.md` | Polishing UI / preparing for review |
 | Debug helpers (`debug_<name>`, premium-gate workaround) | `references/debug-helpers.md` | Verifying state mid-game, end-game stats panel showing "Go premium" |
