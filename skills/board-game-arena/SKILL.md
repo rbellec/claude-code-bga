@@ -674,7 +674,7 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **`getObjectListFromDB($sql)`** returns a simple array — use it instead of `getCollectionFromDb` when the first selected column may have duplicates (see Common Initial Errors for the keying pitfall)
 - **String comparison**: use `===` not `==` — hex colors like `'4baae2'` miscast with `==`
 - **Action autowiring** (new framework): `#[PossibleAction]` + typed parameters = no action.php needed
-- **Forbidden action parameter names**: `$args`, `$activePlayerId`, `$currentPlayerId` — reserved by framework
+- **Reserved (magic) action parameter names** — auto-filled by the framework, never use them for client-sent arguments: `$args`, `$activePlayerId`/`$active_player_id`, `$activePlayerNo`/`$active_player_no`, `$currentPlayerId`/`$current_player_id`, `$currentPlayerNo`/`$current_player_no`
 - **`escapeStringForDB($str)`** — mandatory for any player-supplied string in SQL
 - **Use `clienttranslate()`** for all notification messages — literal text only, no variables inside
 - **Wrap `UserException` messages** in `clienttranslate()` — they're displayed to the player. `SystemException` / `VisibleSystemException` go to server logs and stay untranslated. See `references/translations.md` for the full i18n workflow (alpha vs beta, "Display dummy translation" debug button, raw-value-vs-translated-label pattern)

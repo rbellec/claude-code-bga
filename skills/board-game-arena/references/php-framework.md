@@ -112,7 +112,7 @@ public function actSubmitData(#[JsonParam(class: MyDTO::class)] MyDTO $data): st
 public function actCancel(): string { ... }
 ```
 
-**Forbidden parameter names:** `$args`, `$activePlayerId`, `$active_player_id`, `$currentPlayerId`, `$current_player_id`
+**Reserved (magic) parameter names** — the framework auto-fills these in act methods, so they can never carry client-sent values: `$args`, `$activePlayerId`/`$active_player_id`, `$activePlayerNo`/`$active_player_no`, `$currentPlayerId`/`$current_player_id`, `$currentPlayerNo`/`$current_player_no`. (In PRIVATE-state `getArgs`/`onEnteringState`, `$playerId`/`$player_id`/`$playerNo`/`$player_no` are magic too.)
 
 ## Private Parallel States
 

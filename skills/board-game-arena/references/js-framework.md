@@ -137,7 +137,9 @@ this.bga.actions.performAction('actPlay', args, {
     checkPossibleActions: false,   // ignore lock/active (for multiactive "change mind")
 });
 
-// Forbidden parameter names: $args, $activePlayerId, $currentPlayerId
+// Don't name args after the PHP magic parameters (args, activePlayerId,
+// currentPlayerId + No/snake_case variants — see php-framework.md), nor
+// after the reserved query params: action, module, class
 // Arrays supported: { ids: [1, 2, 3] }
 // JSON strings: { data: JSON.stringify(obj) }
 ```

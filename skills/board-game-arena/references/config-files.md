@@ -1,6 +1,6 @@
 # Config Files — BGA Reference
 
-**Doc:** https://en.doc.boardgamearena.com/Game_options_and_preferences:_gameoptions.inc.php + https://en.doc.boardgamearena.com/Game_statistics:_stats.inc.php + https://en.doc.boardgamearena.com/Gameinfos.inc.php
+**Doc:** https://en.doc.boardgamearena.com/Game_options_and_preferences:_gameoptions.inc.php + https://en.doc.boardgamearena.com/Game_statistics:_stats.inc.php + https://en.doc.boardgamearena.com/Game_meta-information:_gameinfos.inc.php
 **When to use:** Setting up or modifying game options, preferences, statistics, or metadata.
 
 ## gameoptions.json
@@ -170,6 +170,12 @@ $this->bga->playerStats->set('avg_score_per_turn', $avg, $pid);
 > table stat — silent crash in `setupNewGame` if none exists.
 
 ## gameinfos.inc.php
+
+> ⚠ **Recent scaffolds (2026+) generate `gameinfos.jsonc` instead** — JSON with
+> comments, a few fields renamed or moved to the Studio Game Metadata Manager
+> (`disable_player_order_swap_on_rematch`; no more `is_beta`, `complexity`,
+> `luck`, `strategy`, `diplomacy`). See `references/gameinfos-jsonc.md`.
+> The PHP example below applies to legacy `.inc.php` projects.
 
 Game metadata. Key fields:
 
