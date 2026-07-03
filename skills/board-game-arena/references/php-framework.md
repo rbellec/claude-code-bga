@@ -198,9 +198,12 @@ $this->bga->logs->remove($moveId);
 ## Randomization
 
 ```php
-bga_rand($min, $max);           // MANDATORY for dice/random
+bga_rand($min, $max);           // MANDATORY for dice throws, recommended everywhere
 random_int($min, $max);         // acceptable
-// FORBIDDEN: rand(), mt_rand(), array_rand(), shuffle(), SQL RAND()
+// Deprecated, never use: rand(), mt_rand()
+// shuffle() / array_rand() are accepted in review for shuffling
+// (Deck::shuffle itself uses shuffle()), but are not cryptographically
+// secure — prefer bga_rand for anything a player could exploit
 ```
 
 ## Extra Time
@@ -210,31 +213,38 @@ $this->giveExtraTime($pid);             // standard (speed-dependent)
 $this->giveExtraTime($pid, $seconds);   // custom (not recommended)
 // Only affects real-time games
 
-// Game speed detection
-$speed = $this->bga->tableOptions->getGameSpeed();
+// Game mode detection
 $isTurnBased = $this->bga->tableOptions->isTurnBased();
+$isRealTime  = $this->bga->tableOptions->isRealTime();
 ```
 
-## Custom Colors
+## Player Color Preferences
+
+Default colors come from `player_colors` in the gameinfos file. To honor players' favorite colors, set `favorite_colors_support` to true there and call:
 
 ```php
-public function defineColorPalette(): array {
-    return [1 => ['#000000', 'Black'], 2 => ['#ffffff', 'White']];
-}
+// In setupNewGame(), instead of the manual color-assignment loop:
+$this->reattributeColorsBasedOnPreferences($players, $this->getGameinfos()['player_colors']);
+$this->reloadPlayersBasicInfos();
 
-public function assignColorsToPlayers(array $players): void {
-    // Custom assignment logic
-}
+// If some colors are interchangeable pairs (e.g. teams), also override:
+public function getSpecificColorPairings(): array { ... }
 ```
 
 ## Error Handling
 
 ```php
+use Bga\GameFramework\UserException;
+use Bga\GameFramework\VisibleSystemException;
+
 // User error — rolls back DB, prevents notifications, shows error to player
 throw new UserException(clienttranslate('You cannot do that'));
 
-// System error — shows to player, triggers reload
-throw new \BgaVisibleSystemException('Something broke');
+// System error — shows to player, triggers reload (untranslated, devs only)
+throw new VisibleSystemException('Something broke');
+// Also: Bga\GameFramework\SystemException (server logs only)
+// The global \BgaVisibleSystemException / \BgaUserException names are the
+// deprecated legacy equivalents (see references/legacy-migration.md)
 
 // DB transactions are automatic:
 // - Exception → full rollback, notifications NOT sent

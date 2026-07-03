@@ -185,8 +185,8 @@ bga_format(_('This is *bold* and _highlighted_'), {
   // ✅
   throw new UserException(clienttranslate('Invalid position'));
   ```
-  `SystemException` and `VisibleSystemException` are the opposite — they go
-  to server logs, devs only, and **must not** be translated.
+  `Bga\GameFramework\SystemException` and `VisibleSystemException` are the
+  opposite — they go to server logs, devs only, and **must not** be translated.
 
 ## Useful URLs
 
