@@ -15,7 +15,7 @@ You are helping implement a board game on Board Game Arena Studio, using the **n
 - BGA Studio account created, game registered at https://studio.boardgamearena.com
 - SSH key generated and submitted in BGA Studio settings (propagation: up to 1h)
   - Generate: `ssh-keygen -t ed25519 -f ~/.ssh/id_rsa_bga`
-  - Test: `sftp -i ~/.ssh/id_rsa -P 2022 -o IdentitiesOnly=yes USERNAME@1.studio.boardgamearena.com`
+  - Test: `sftp -i ~/.ssh/id_rsa_bga -P 2022 -o IdentitiesOnly=yes USERNAME@1.studio.boardgamearena.com`
   - **SSH key safety:** never read or list private files (`~/.ssh/id_rsa`, etc.). To get deployment config (username, key path), look at Makefiles of existing BGA projects in the workspace, or ask the user.
 - Chrome extension "Claude in Chrome" connected
 - `make check` and `make deploy` working in the project directory
@@ -33,7 +33,7 @@ When a game is created on BGA Studio, a scaffold is auto-generated server-side. 
 
 ```bash
 mkdir -p bga_initial_code_template
-sftp -i ~/.ssh/id_rsa -P 2022 -o IdentitiesOnly=yes USER@1.studio.boardgamearena.com
+sftp -i ~/.ssh/id_rsa_bga -P 2022 -o IdentitiesOnly=yes USER@1.studio.boardgamearena.com
 > get -r GAMENAME/* bga_initial_code_template/
 ```
 
