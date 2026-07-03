@@ -45,19 +45,37 @@ this.handStock = new BgaCards.HandStock(this.cardsManager, document.getElementBy
 // Grid layout
 this.gridStock = new BgaCards.GridStock(this.cardsManager, document.getElementById('grid'));
 
+// Fixed named slots (board positions, tableau columns) — element must start empty
+this.boardStock = new BgaCards.SlotStock(this.cardsManager, document.getElementById('board'), {
+    slotsIds: ['slot1', 'slot2', 'slot3'],                 // required (numbers or strings)
+    mapCardToSlot: (card) => `slot${card.location_arg}`,   // required — auto-places cards
+    slotClasses: ['mygame-slot'],                          // optional
+    direction: 'row',                                      // 'row' (default) | 'column'
+});
+
+// Manual positioning — you compute each card's coordinates yourself
+this.mapStock = new BgaCards.ManualPositionStock(this.cardsManager,
+    document.getElementById('map'), {},
+    (element, cards, lastCard, stock) => { /* set each card div's left/top */ });
+
 // Card deck (stacked, shows count)
 this.deckStock = new BgaCards.Deck(this.cardsManager, document.getElementById('deck'));
 
 // Void (removed cards — limited animations)
 this.voidStock = new BgaCards.VoidStock(this.cardsManager);
+
+// Also available: DiscardDeck, AllVisibleDeck, ScrollableStock, CardCounter
 ```
 
 ## API
 
 ### Adding/Removing (async — use await)
-- `await stock.addCards(cards)` — add cards array to stock
-- `await stock.removeCards(cards, settings)` — remove with optional animation
+- `await stock.addCards(cards)` / `await stock.addCard(card)` — add to stock
+- `await stock.removeCards(cards, settings)` / `removeCard(card)` — remove; animation settings incl. `fadeOut`, `slideTo`
 - `await stock.addCards(cards, { fromStock: otherStock })` — animate from another stock
+- SlotStock: `await stock.addCard(card, { slot: 'slot2' })` — overrides `mapCardToSlot`; `setSlotsIds(ids)` re-creates slots (**empties the stock**), `addSlotsIds(ids)` adds without touching existing ones
+
+Card objects require `{ id, type, type_arg, location, location_arg }`.
 
 ### Selection (sync)
 - `stock.setSelectableCards(cards)` — define which cards can be selected
@@ -103,7 +121,8 @@ Cards get CSS classes based on `type` from the Manager config:
 
 - **PHP Deck returns maps, not arrays** — always `Object.values()` or `array_values()` in PHP before sending to JS
 - **Fields are strings from PHP** — cast to int for sorting: `card.type_arg = parseInt(card.type_arg, 10)`
-- **`addCards` is async** but `setSelectableCards` is sync — don't mix without `await`
+- **`addCards` is async, `setSelectableCards` is sync** — if cards are added in `setup()` and selected in `onEnteringState()`, the selection can run before the cards exist. You can't `await` the sync call; the documented workaround is to promisify with `setTimeout` before selecting
+- **`setSlotsIds` empties the stock** — use `addSlotsIds` to extend without losing cards
 - **`isCardVisible` is confusing** — it controls which face shows, not visibility. Default returns `card.type`; usually set to `() => true`
 - **VoidStock has limited animations** — prefer `removeCards()` on other stocks
 - **Requires BgaAnimations** — always load it first

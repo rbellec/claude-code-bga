@@ -15,10 +15,12 @@ public function __construct() {
     parent::__construct();
     $this->playerEnergy = $this->counterFactory->createPlayerCounter('energy');
     $this->roundCounter = $this->counterFactory->createTableCounter('round');
+    // Full factory signature: createPlayerCounter(string $name, ?int $min = 0,
+    //   ?int $max = null, CounterVisibility $visibility = VISIBLE, bool $useNo = false)
+    // min/max bound the counter; visibility 'self'/'private' hides values (see Pitfalls)
 }
 
-// In setupNewGame():
-$players = $this->loadPlayersNatural();
+// In setupNewGame() — use its $players argument directly:
 $this->playerEnergy->initDb(array_keys($players), 3); // initial value = 3
 $this->roundCounter->initDb(1); // initial value = 1
 
