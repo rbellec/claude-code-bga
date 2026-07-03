@@ -245,11 +245,13 @@ throw new \BgaVisibleSystemException('Something broke');
 ## Zombie Handling
 
 ```php
-// In state class:
-public function zombie(int $playerId): void {
-    // Make a valid move for disconnected player
+// In state class — returns the next state, exactly like an act method:
+public function zombie(int $playerId): string {
+    // Make a valid default move for the disconnected player.
+    // Simplest robust pattern: delegate to one of the state's act methods.
     // NEVER call getCurrentPlayerId() here — use $playerId parameter
     // Cannot end game from zombie — must continue
+    return $this->actPass();
 }
 ```
 

@@ -662,7 +662,7 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **DB integers return as strings** — always cast: `(int)$row['value']`
 - **Use `bga_rand(min, max)`** for dice/random — `rand()` and `mt_rand()` forbidden in review
 - **Never use TRUNCATE or DROP** — they do implicit commits that break BGA's transaction rollback
-- **Never call `getCurrentPlayerId()`** in `setupNewGame()` or args methods — causes "Not logged" errors. (For `zombieTurn()`, see Zombie handling below.)
+- **Never call `getCurrentPlayerId()`** in `setupNewGame()` or args methods — causes "Not logged" errors. (For `zombie()`, see Zombie handling below.)
 - **Active player can only change in GAME-type states** — `activeNextPlayer()` / `changeActivePlayer()` are no-ops inside ACTIVE_PLAYER states
 - **Args methods must return arrays** — never int/string, never modify DB in args
 - **At least one notification per action** is required (state transitions count)
@@ -694,8 +694,9 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 
 ### Zombie handling
 
-- Never call `getCurrentPlayerId()` in `zombieTurn()` — use the `$active_player_id` parameter
-- States must have a `"zombiePass"` transition (exact spelling)
+- Implement `public function zombie(int $playerId): string` on each `ACTIVE_PLAYER` / `MULTIPLE_ACTIVE_PLAYER` state class — the framework calls it for expelled/disconnected players
+- Return the next state class, exactly like an act method. Simplest robust pattern: call one of the state's own act methods with a valid default move (e.g., `return $this->actChooseCard($defaultId);`)
+- Never call `getCurrentPlayerId()` in `zombie()` — use the `$playerId` parameter
 - Cannot end game from zombie method — must continue game logic
 
 ### Debug tips
