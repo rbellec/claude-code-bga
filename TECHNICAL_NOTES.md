@@ -1,4 +1,4 @@
-# BGA Alpha — Technical Notes
+# BGA Skill — Technical Notes
 
 Detailed explanations for the pitfalls listed in `SKILL.md`. Reference this file when you need to understand *why* a rule exists.
 
@@ -106,12 +106,32 @@ Array.from(document.querySelectorAll('a'))
 
 ## Table view vs game URL in BGA Studio
 
-When navigating to a table in BGA Studio, two different pages exist:
+Three different pages exist around a table in BGA Studio:
 
-- `/tableview?table=N` — new Svelte-based lobby view, no classic Dojo element IDs (`invite_friend`, `player_select_-99` are absent)
-- `/table?table=N` — classic Dojo table page with the standard invite/hotseat UI
+- `/tableview?table=N` — Svelte-based table/spectator view; no `game_play_area`, cannot play
+- `/table?table=N` — classic table configuration page; this is where the "Express start" button lives
+- `/1/GAME_NAME?table=N` — the actual game (player view, once `setupNewGame` has run); add `&testuser=PLAYER_ID` to play as another hotseat player
 
-BGA Studio redirects `/table?table=N` → `/tableview?table=N` on the first load, but the classic URL becomes accessible after the Svelte app initializes. Navigate to `/table?table=N` for automation (invite_friend, startgame buttons).
+The automated flow (SKILL.md §3.4–3.5) is: lobby → "Play with friends" (lands on `/table?table=N`) → "Express start" → BGA redirects to `/tableview` → navigate explicitly to `/1/GAME_NAME?table=N` to reach the player view. The redirect to `/tableview` after Express start is why the navigation step to the player view is always needed.
 
-The actual game URL (after `setupNewGame` runs) is:
-`/1/GAME_NAME?table=N&testuser=PLAYER_ID`
+---
+
+## Why PHP warnings corrupt the JSON response (always `$this->`, never `self::`/`static::`)
+
+BGA action endpoints answer with a raw JSON body. PHP prints warnings and deprecation notices directly into the HTTP output, so any warning emitted during a request lands in front of the JSON — the client then fails with `JSON_ERROR_SYNTAX` even though the server-side action usually completed. The game UI breaks with no obvious server error.
+
+PHP 8.4 emits deprecation warnings on patterns common in older BGA code, notably static-style calls to framework instance methods (`self::DbQuery(...)`, `static::DbQuery(...)`) and legacy string interpolation (`${var}`). Hence the rules: `$this->` for every instance method, `{$var}` in strings. (`self::CONST` for class constants is fine — constants are genuinely static.)
+
+---
+
+## Why `PlayerStats::init` takes no player id
+
+The signature is `init($name, $value, bool $updateTableStat = false)` — it initializes the stat for **all** players in one call. Passing a player id as the third argument silently casts the int to `true`, which makes the framework also try to initialize a **table** stat with the same name. If no such table stat exists, `setupNewGame` crashes.
+
+`inc` and `set` are the asymmetric counterparts: they **do** take a `$playerId`, and it is required.
+
+---
+
+## Why `reloadPlayersBasicInfos()` before INSERT/initStat in setupNewGame
+
+The framework caches player basic infos (name, color, order) once per request. `setupNewGame` mutates the `player` table after that cache was populated — typically the color UPDATE loop. Every helper that reads the cache afterwards (`getPlayerNameById`, `loadPlayersBasicInfos`, stat initialization iterating players) would see stale data unless the cache is refreshed. Call `reloadPlayersBasicInfos()` right after the color updates, before any custom INSERT or `initStat`.
