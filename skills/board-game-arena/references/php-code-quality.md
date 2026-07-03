@@ -186,7 +186,7 @@ namespace Bga\GameFramework\States {
         public function getId(): int { return 0; }
         public function getName(): string { return ''; }
         public function getType(): string { return ''; }
-        public function onEnteringState(int $activePlayerId): mixed { return null; }
+        public function onEnteringState(array $args): mixed { return null; }
         public function getArgs(): array { return []; }
         public function getPossibleActions(): array { return []; }
     }
@@ -218,10 +218,14 @@ namespace Bga\GameFramework\Components {
 
     class PlayerStats
     {
-        public function init(string $name, mixed $value, int $playerId): void {}
+        // init has NO $playerId — it inits all players in one call.
+        // Passing an int silently casts to true and crashes setupNewGame
+        // (see SKILL.md / config-files.md). Keep the stub faithful so
+        // PHPStan flags the mistake instead of approving it.
+        public function init(string $name, mixed $value, bool $updateTableStat = false): void {}
         public function set(string $name, mixed $value, int $playerId): void {}
         public function get(string $name, int $playerId): mixed { return null; }
-        public function inc(string $name, int $delta = 1, int $playerId = 0): void {}
+        public function inc(string $name, int $delta, int $playerId): void {}
     }
 
     class TableOptions
