@@ -84,7 +84,7 @@ foreach ($players as $pid => $player) {
 // In an action: play a card
 $card = $this->cards->getCard($cardId);
 if ($card['location'] !== 'hand' || (int)$card['location_arg'] !== $playerId) {
-    throw new UserException('Not your card');
+    throw new UserException(clienttranslate('Not your card'));
 }
 $this->cards->playCard($cardId);
 ```

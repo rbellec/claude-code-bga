@@ -564,8 +564,10 @@ Commit points (at minimum):
 ```bash
 git add -A && git commit -m "feat: description of what was done
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
+
+(Use the co-author trailer for the Claude model actually in use if your environment provides one.)
 
 **Key rule:** smaller, frequent commits are better than large ones. If a step involves multiple independent changes (e.g., implementing two unrelated game states), commit each separately.
 
