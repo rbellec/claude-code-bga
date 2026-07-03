@@ -15,12 +15,14 @@ this.helpSection.create(this.bga.gameui, 'my_expandable');
 
 ### Required HTML
 
+All inner parts must have **ids** (in addition to the class names) — dojo.query needs them:
+
 ```html
 <div id="my_expandable">
-    <a href="#" class="expandabletoggle expandablearrow">
-        <div class="icon20"></div>
+    <a href="#" id="my_expandable_toggle" class="expandabletoggle expandablearrow">
+        <div id="my_expandable_icon" class="icon20"></div>
     </a>
-    <div class="expandablecontent">
+    <div id="my_expandable_content" class="expandablecontent">
         Content that can be expanded/collapsed.
     </div>
 </div>
@@ -36,5 +38,5 @@ this.helpSection.create(this.bga.gameui, 'my_expandable');
 ## Pitfalls
 
 - **Built-in click handler** — the toggle link auto-wires; no manual event needed
-- **ID requirements** — inner elements need proper class names for dojo.query to find them
+- **Every inner element needs an id** (toggle link, content div) — class names alone are not enough; without ids the component silently does nothing
 - **Set initial state in `setup()`** — don't rely on defaults

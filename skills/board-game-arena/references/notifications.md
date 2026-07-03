@@ -35,15 +35,27 @@ Use `${player_name}` in the message with a matching `player_id` in args — BGA 
 
 ### Private Data in Public Notifications
 
+Each `_private` entry is a `NotificationMessage` (replacement log + private args) — not a plain array:
+
 ```php
+use Bga\GameFramework\NotificationMessage;
+
 $this->bga->notify->all('cardDealt', clienttranslate('A card is dealt to ${player_name}'), [
     'player_id' => $pid,
     'player_name' => $this->getPlayerNameById($pid),
     '_private' => [
-        $pid => ['card' => $cardData],   // only this player sees the card
+        // this player sees the private log AND receives the private args
+        $pid => new NotificationMessage(
+            clienttranslate('You receive ${card_name}'),
+            ['card' => $cardData, 'card_name' => $cardName, 'i18n' => ['card_name']]
+        ),
     ],
+    '_merge_private' => true,  // merge private args into args for that player
+    // (or call $this->bga->notify->alwaysMergePrivate() once in setup)
 ]);
 ```
+
+JS side: without `_merge_private`, the private args arrive under `args._private`; with it, they are merged into `args` for the targeted player.
 
 ### Preserve Args for Replay
 
