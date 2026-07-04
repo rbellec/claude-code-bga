@@ -678,7 +678,7 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **Use `bga_rand(min, max)`** for dice/random — `rand()` and `mt_rand()` forbidden in review
 - **Never use TRUNCATE or DROP** — they do implicit commits that break BGA's transaction rollback
 - **Never call `getCurrentPlayerId()`** in `setupNewGame()` or args methods — causes "Not logged" errors. (For `zombie()`, see Zombie handling below.)
-- **Active player can only change in GAME-type states** — the framework forbids `activeNextPlayer()` / `changeActivePlayer()` inside ACTIVE_PLAYER and MULTIPLE_ACTIVE_PLAYER states (see `_ide_helper.php`). Insert a small GAME state (e.g. `NextTurn`) that calls `activeNextPlayer()` and returns the next state class
+- **Active player can only change in GAME-type states** (official doc) — and `_ide_helper.php` adds that any `activeNextPlayer()` / `changeActivePlayer()` call must be followed by a state transition in the same action, so the front is notified. Insert a small GAME state (e.g. `NextTurn`) that calls `activeNextPlayer()` and returns the next state class
 - **Every ACTIVE_PLAYER state must always offer a legal action** — if the rules can produce a position where the active player has no legal move (e.g. an action needing two free squares with only one left), resolve it automatically in the preceding GAME state (auto-place, auto-pass); otherwise the table hard-locks with timeout/zombie as the only way out
 - **Args methods must return arrays** — never int/string, never modify DB in args
 - **At least one notification per action** is required (state transitions count)
@@ -712,7 +712,7 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 
 - Implement `public function zombie(int $playerId): string` on each `ACTIVE_PLAYER` / `MULTIPLE_ACTIVE_PLAYER` state class — the framework calls it for expelled/disconnected players
 - Return the next state class, exactly like an act method. Simplest robust pattern: call one of the state's own act methods with a valid default move, passing the player id (e.g., `return $this->actChooseCard($defaultId, $playerId);`)
-- This only works if the act method takes the acting player as a parameter (the `$activePlayerId` magic param, see 2.2/2.3). Never call `getCurrentPlayerId()` anywhere on the zombie code path — zombie turns are triggered server-side with **no current player**, so it throws
+- The act method must never read `getCurrentPlayerId()` on the zombie code path — zombie turns run server-side with **no current player**, so it throws. Preferred pattern: the `$activePlayerId` magic param (see 2.2/2.3 — works in every case). In single-active states, an act method using `getActivePlayerId()` also survives zombie delegation (the zombie is still the active player)
 - Use `bga_rand()` for the random default move, not `shuffle()`/`rand()`
 - Cannot end game from zombie method — must continue game logic
 
