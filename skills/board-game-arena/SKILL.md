@@ -184,16 +184,23 @@ class PlayerTurn extends GameState
     public function onEnteringState(array $args): void { }
 
     #[PossibleAction]
-    public function actDoSomething(string $param): string {
-        $playerId = $this->game->getCurrentPlayerId();
+    public function actDoSomething(string $param, int $activePlayerId): string {
+        // $activePlayerId is a MAGIC param: autowired by the framework, never sent
+        // by the client. Do NOT call getCurrentPlayerId() here — it fails when
+        // zombie() delegates to this method (server-side call, no current player).
         // validate...
         // do work...
         // Send notification for every action
         $this->game->bga->notify->all('somethingDone', clienttranslate('${player_name} did something'), [
-            'player_id' => $playerId,
-            'player_name' => $this->game->getPlayerNameById($playerId),
+            'player_id' => $activePlayerId,
+            'player_name' => $this->game->getPlayerNameById($activePlayerId),
         ]);
         return NextState::class; // return the next state class, not a string
+    }
+
+    // zombie delegation works because the act method takes the player id as a param
+    public function zombie(int $playerId): string {
+        return $this->actDoSomething('default', $playerId);
     }
 
     // Action parameter validation (autowired — no action.php needed)
@@ -214,21 +221,25 @@ class PlayerTurn extends GameState
 - **Never** override `argGameEnd()` or `stGameEnd()` — they are `final`. Use a state 98 (`computeScores`) instead
 - State IDs 1 and 99 are reserved (gameSetup, gameEnd)
 
-### 2.3 Multiactive state — getCurrentPlayerId
+### 2.3 Who is acting? — ACTIVE_PLAYER vs MULTIPLE_ACTIVE_PLAYER
 
-In `MULTIPLE_ACTIVE_PLAYER` actions, the client does **not** send `activePlayerId`. Do not add it as a PHP parameter:
+In **ACTIVE_PLAYER** states, declare the magic `int $activePlayerId` parameter (autowired, see 2.2) and never call `getCurrentPlayerId()` in the act method — the magic param is what keeps zombie delegation working.
+
+In **MULTIPLE_ACTIVE_PLAYER** states there is no single active player, so `$activePlayerId` is not usable. Use `getCurrentPlayerId()`:
 
 ```php
-// ✗ Wrong — client never sends this parameter
+// ✗ Wrong in a multiactive state — no single active player to autowire
 public function actChoose(int $activePlayerId, string $choice): string { ... }
 
-// ✓ Correct
+// ✓ Correct in a multiactive state
 public function actChoose(string $choice): string {
     $playerId = $this->game->getCurrentPlayerId(); // framework provides it
     ...
     return NextState::class;
 }
 ```
+
+Consequence for zombies of multiactive states: `zombie($playerId)` cannot delegate to such an act method (it would hit `getCurrentPlayerId()` with no current player). Extract the shared logic into a helper taking an explicit `$playerId`, called by both.
 
 ### 2.4 New framework API
 
@@ -667,7 +678,8 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **Use `bga_rand(min, max)`** for dice/random — `rand()` and `mt_rand()` forbidden in review
 - **Never use TRUNCATE or DROP** — they do implicit commits that break BGA's transaction rollback
 - **Never call `getCurrentPlayerId()`** in `setupNewGame()` or args methods — causes "Not logged" errors. (For `zombie()`, see Zombie handling below.)
-- **Active player can only change in GAME-type states** — `activeNextPlayer()` / `changeActivePlayer()` are no-ops inside ACTIVE_PLAYER states
+- **Active player can only change in GAME-type states** — the framework forbids `activeNextPlayer()` / `changeActivePlayer()` inside ACTIVE_PLAYER and MULTIPLE_ACTIVE_PLAYER states (see `_ide_helper.php`). Insert a small GAME state (e.g. `NextTurn`) that calls `activeNextPlayer()` and returns the next state class
+- **Every ACTIVE_PLAYER state must always offer a legal action** — if the rules can produce a position where the active player has no legal move (e.g. an action needing two free squares with only one left), resolve it automatically in the preceding GAME state (auto-place, auto-pass); otherwise the table hard-locks with timeout/zombie as the only way out
 - **Args methods must return arrays** — never int/string, never modify DB in args
 - **At least one notification per action** is required (state transitions count)
 - **Notification size limit**: 128KB total across bundled requests
@@ -699,8 +711,9 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 ### Zombie handling
 
 - Implement `public function zombie(int $playerId): string` on each `ACTIVE_PLAYER` / `MULTIPLE_ACTIVE_PLAYER` state class — the framework calls it for expelled/disconnected players
-- Return the next state class, exactly like an act method. Simplest robust pattern: call one of the state's own act methods with a valid default move (e.g., `return $this->actChooseCard($defaultId);`)
-- Never call `getCurrentPlayerId()` in `zombie()` — use the `$playerId` parameter
+- Return the next state class, exactly like an act method. Simplest robust pattern: call one of the state's own act methods with a valid default move, passing the player id (e.g., `return $this->actChooseCard($defaultId, $playerId);`)
+- This only works if the act method takes the acting player as a parameter (the `$activePlayerId` magic param, see 2.2/2.3). Never call `getCurrentPlayerId()` anywhere on the zombie code path — zombie turns are triggered server-side with **no current player**, so it throws
+- Use `bga_rand()` for the random default move, not `shuffle()`/`rand()`
 - Cannot end game from zombie method — must continue game logic
 
 ### Debug tips
