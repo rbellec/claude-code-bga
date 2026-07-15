@@ -155,6 +155,7 @@ class Game extends Table
 - **Constants:** declare as `public const` on the `Game` class, NOT `define()` in `material.inc.php`. Reference as `self::MY_CONST` in Game.php, `Game::MY_CONST` in States. (See `TECHNICAL_NOTES.md` for why `define()` breaks under namespaces.)
 - **Globals:** use `$this->bga->globals->set/get` (any type, JSON-serialized). `initGameStateLabels` is legacy and **int-only** — these are two distinct systems, do not mix them
 - `material.inc.php` is auto-included by the framework — **never** `include()` it manually
+- **Extra PHP classes are autoloaded**: `modules/php/MyClass.php` in the game namespace (`Bga\Games\GameName`) loads without any `require` (PSR-4 mapping from `modules/php/`). Ideal for a pure rules/geometry class, unit-testable locally without the framework
 - No `self::` on instance methods — PHP 8.4 generates warnings that corrupt JSON output. Use `$this->` everywhere. (`self::CONST` for class constants is fine)
 - `{$var}` not `${var}` in strings (PHP 8.4)
 - `implode(separator, array)` not `implode(array, separator)` (PHP 8.4)
@@ -457,18 +458,28 @@ Wait 3 seconds.
 
 ### 3.4 Create table + start with hotseat
 
-Click "Play with friends" on the lobby page, then "Express start" on the table page:
+On the lobby page, "Play with friends" only **expands a section** — the table is created by the **"Create"** ("Create a new table") button inside it:
 
 ```javascript
-// Step 1: On the lobby page (/lobby?game=GAME_ID), click "Play with friends"
+// Step 1: On the lobby page (/lobby?game=GAME_ID), expand "Play with friends"
 const pwf = Array.from(document.querySelectorAll('a')).find(a => a.textContent.includes('Play with friends'));
 pwf?.click();
 ```
 
-Wait 5 seconds — URL changes to `/table?table=N`.
+Wait 2 seconds for the section to expand.
 
 ```javascript
-// Step 2: On the table page, click "Express start" (overriding confirm dialog)
+// Step 2: Click "Create" — this is what creates the table.
+// Verify there is exactly ONE match: other Studio projects can render
+// their own "Create" link in the same panel (see 3.8).
+const creates = Array.from(document.querySelectorAll('a, button')).filter(b => b.textContent.trim() === 'Create');
+if (creates.length === 1) creates[0].click();
+```
+
+Wait 5 seconds — URL changes to `/table?table=N`. **If nothing happens:** a previous test table may still be open, or the first click only focused the panel — see 3.8 before suspecting your code.
+
+```javascript
+// Step 3: On the table page, click "Express start" (overriding confirm dialog)
 const origConfirm = window.confirm;
 window.confirm = () => true;
 const expressBtn = Array.from(document.querySelectorAll('a, button')).find(b => b.textContent.trim() === 'Express start');
@@ -519,6 +530,17 @@ mcp__claude-in-chrome__read_console_messages(tabId, pattern: "error|Error|fatal"
 ### 3.7 Fix → repeat from 3.2
 
 Full cycle: ~30 seconds.
+
+### 3.8 Known automation gotchas
+
+Environment friction, not game-code bugs — check here before debugging your own code:
+
+- **A stale/still-open table silently blocks creating a new one** — even a table from a *different* Studio project sharing the same test accounts. Symptom: "Create" does nothing, no visible error. Fix: find the stuck table (browser history, bottom-of-page banner, or `/table?table=N`) and click **"Express stop"** on its config page (override `window.confirm`) — `quitgame.html` via ajaxcall (3.5b) is not enough for a game in progress. Also the first thing to check on a "can't start a hotseat game" bug report before assuming a code bug.
+- **Express start creates a REAL-TIME table** with a short clock. If no client stays on the game page (both hotseat players navigating away to logaccess/manage, or switching `?testuser=` back and forth in a single tab), BGA auto-abandons the game: "All players (with a positive clock) choosed to abandon this game", "End of game: Tie", scores 0/0. **This is not a bug in your game** — recreate a table. Prevention: test hotseat with **two browser tabs, one per player** (`tabs_create_mcp` for the second), and avoid long detours through logaccess/manage mid-game.
+- **The first click on a freshly-rendered lobby panel may only focus it** — if navigation doesn't happen within ~2 s of clicking "Create", click the same element again before assuming the click failed for a code reason.
+- **Coordinate-based clicks on "Create" can hit the wrong game** when several Studio projects render in the "Play with friends" panel — verify there is exactly one match (3.4 selector, or `read_page` with the interactive filter) instead of trusting a remembered pixel coordinate.
+- **`file_upload` to a BGA Studio file input is unreliable** — for spec-strict assets (box art, icons), generate the file locally and hand it to the user to upload through the normal browser UI. A local `http.server` + screenshot round-trip cannot be trusted for transparency or exact dimensions.
+- **The "BGA unexpected exceptions logs" view is account-global**, not scoped to the current game — recent lines get flooded by unrelated projects, so it only helps for an error caught within the same session it happened.
 
 ---
 

@@ -135,3 +135,21 @@ The signature is `init($name, $value, bool $updateTableStat = false)` — it ini
 ## Why `reloadPlayersBasicInfos()` before INSERT/initStat in setupNewGame
 
 The framework caches player basic infos (name, color, order) once per request. `setupNewGame` mutates the `player` table after that cache was populated — typically the color UPDATE loop. Every helper that reads the cache afterwards (`getPlayerNameById`, `loadPlayersBasicInfos`, stat initialization iterating players) would see stale data unless the cache is refreshed. Call `reloadPlayersBasicInfos()` right after the color updates, before any custom INSERT or `initStat`.
+
+---
+
+## Why Express-start test tables end by themselves ("abandon")
+
+"Express start" creates a **real-time** table with a short clock — not a turn-based one. In real-time mode, BGA treats players whose client is no longer on the game page as absent, and when every player with a positive clock is absent long enough, it ends the table on its own: *"All players (with a positive clock) choosed to abandon this game"*, displayed as "End of game: Tie" with scores 0/0.
+
+During an automated test session this is easy to trigger without noticing: navigating both hotseat players away to logaccess/manage between two checks, or switching `?testuser=` back and forth in a single tab (which briefly flags the other player offline each time). The resulting Tie 0/0 looks exactly like a scoring bug in your own code — it isn't.
+
+**The rule (SKILL 3.8):** keep one connected client per player — two browser tabs, one per `testuser` — and don't park the game unattended mid-test. An unexpected "abandon" ending means recreate the table, not debug the game.
+
+---
+
+## Why creating a table can silently fail
+
+The shared Studio test accounts can be blocked by a table that is still open — including a table from a **different** Studio project, left over from a previous session. The lobby gives no feedback: the "Create" click just does nothing.
+
+Because there is no error message, this failure mode gets misattributed — either to the automation ("the click didn't register") or to the game code ("hotseat creation is broken"). Before either assumption, find the leftover table (browser history, the bottom-of-page banner, or `/table?table=N`) and click **"Express stop"** on its config page with `window.confirm` overridden. A `quitgame.html` ajaxcall is not sufficient for a game in progress — only Express stop actually frees the accounts.
