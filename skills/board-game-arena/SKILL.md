@@ -559,8 +559,10 @@ document.getElementById('debugParamDlgApply').click();
 **Full SQL/request logs** (best for stack traces):
 `/1/GAME_NAME/GAME_NAME/logaccess.html?table=N`
 
-**`debug_<name>` PHP helpers from the toolbar:** any `public function debug_*` on
-`Game.php` is invokable from the Studio Debug input (right of the table); output
+**`debug_<name>` PHP helpers:** any `public function debug_*` on `Game.php` gets
+an auto-generated **button** in the `#toggleDebugFunctionsPanel` panel on the
+player page (directly scriptable: `document.getElementById('debug_myHelper').click()`)
+and is also invokable from the Studio Debug input (right of the table); output
 to the chat log via `notify->all('log', ...)`. See `references/debug-helpers.md`.
 
 **End-game stats panel says "Go premium":** click "Become premium" on your Studio

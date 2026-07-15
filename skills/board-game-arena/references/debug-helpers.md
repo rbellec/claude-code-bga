@@ -7,10 +7,19 @@ Studio toolbar.
 
 ## The `debug_<name>` pattern
 
-Any `public function debug_<name>(): void` declared on `Game.php` becomes
-callable from the **Debug input** at the right of the Studio table. Type
-`debug_<name>` (no parentheses) and hit Enter — output goes to the chat log
-via `notify->all` and is visible regardless of premium status.
+Any `public function debug_<name>(): void` declared on `Game.php` can be
+invoked two ways:
+
+1. **Auto-generated button** — the framework renders one button per
+   `debug_*` function in the `#toggleDebugFunctionsPanel` panel of the
+   player page. Each button's DOM id is the function name, so it's directly
+   scriptable from the automation loop:
+   `document.getElementById('debug_myHelper').click()`. Simplest path.
+2. **Debug input** at the right of the Studio table — type `debug_<name>`
+   (no parentheses) and hit Enter.
+
+Either way, output goes to the chat log via `notify->all` and is visible
+regardless of premium status.
 
 Useful for dumping stats mid-game, triggering a scenario without replaying
 from scratch, or reading a DB table without opening the SQL log.
@@ -28,6 +37,15 @@ public function debug_dumpStats(): void
     $this->bga->notify->all('log', $msg, []);
 }
 ```
+
+## Designing scenario helpers
+
+A `debug_*` helper that sets up a board position to test a rule must keep
+the scenario **stable through the next move**. Example: to test an
+auto-pass on a blocked position, the helper must also leave the active
+player a mobile piece **far away from the blockade** — otherwise the
+active player's first move frees the blocked area and invalidates the
+scenario before the rule under test ever fires.
 
 ## Premium-gate workaround for the end-game stats panel
 
