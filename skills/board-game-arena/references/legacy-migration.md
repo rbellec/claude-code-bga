@@ -2,9 +2,28 @@
 
 **Type:** Process (PHP + JS + config)
 **Doc:** https://en.doc.boardgamearena.com/BGA_Studio_Migration_Guide
-**When to use:** Taking over a project written for the pre-2025 framework (`.game.php` at the root, `states.inc.php`, `.action.php`, Dojo-class JS) and bringing it to the new framework this skill targets.
+**When to use:** Taking over a project written for the pre-2025 framework (`.game.php` at the root, `states.inc.php`, `.action.php`, Dojo-class JS) and bringing it to the new framework this skill targets — including the case of a legacy scaffold with no code worth keeping, and reactivated archived projects.
 
 The rest of the skill describes the **target** state; this file maps each legacy construct to it. Migrate incrementally — the framework tolerates mixed setups (e.g. legacy `states.inc.php` alongside new notification API) — but finish each row before relying on its new-framework behavior.
+
+## Legacy scaffold, nothing to migrate
+
+An old Studio project whose scaffold contains no game logic worth keeping is **rewritten from scratch** on the new framework, not migrated. The new framework is available on old projects too — the server pushes an up-to-date `_ide_helper.php` and `bga-framework.d.ts` even to a pre-2025 project.
+
+1. Download and archive the server scaffold into `bga_initial_code_template/` (SKILL 1.1) — do this **first** (vital on a reactivated project, see below)
+2. Purge the legacy files from the server via SFTP: `GAMENAME.game.php`, `GAMENAME.action.php`, `GAMENAME.view.php`, `GAMENAME_GAMENAME.tpl`, `states.inc.php`, `stats.inc.php`, `gameoptions.inc.php`, root `material.inc.php`
+3. Deploy the new-framework structure (SKILL Phases 1–2) — the table starts on the new framework from the first deploy
+
+## Reactivated archived project: unstable first hours
+
+Reactivating an archived Studio project may not hold: the SFTP directory — and the project's entry in the games list — can disappear within the hour following reactivation, even after a successful first deploy, while the studiogame page and running tables keep working. Symptom: `make deploy` fails with `scp: remote mkdir "GAMENAME/": Permission denied`. The **"Fix SFTP permissions"** button answers "Update file permissions ✅" but does not recreate the directory.
+
+Recovery sequence (verified):
+
+1. studiogame page → **"Overwrite working copy with this revision"** (head) — recreates the server-side code ("HAL says: done") but NOT the SFTP mount nor the list entry
+2. `/studio` (Manage games) → **"Create a new game project"** form with the **same name** → "Project X has been reactivated!" — SFTP and the list entry come back immediately
+3. The restored copy is a **mix** (old legacy files + recently deployed ones) → re-purge the legacy files and redeploy everything
+4. Click **"Commit my modifications now"** (BGA's VCS) so head reflects the new structure and the next overwrite/restore no longer brings the legacy files back
 
 ## File-level changes
 
