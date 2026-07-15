@@ -423,6 +423,7 @@ For detailed API beyond the patterns above, load the relevant reference file.
 | BGA Studio Guidelines (layout, a11y, UX) | `references/guidelines.md` | Polishing UI / preparing for review |
 | Debug helpers (`debug_<name>`, premium-gate workaround) | `references/debug-helpers.md` | Verifying state mid-game, end-game stats panel showing "Go premium" |
 | Rules clarification process | `references/rules-clarification.md` | Analyzing rules, managing author Q&A |
+| Requesting ALPHA status (checklist, images, licensing, zombie level, tags) | `references/alpha-release.md` | Project plays end-to-end and you're ready to leave "in development" |
 | BGG submission helper | `references/bgg-submission.md` | Producing the BGG entry that unlocks `bgg_id` (post-release, optional) |
 
 ---
@@ -715,6 +716,8 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - The act method must never read `getCurrentPlayerId()` on the zombie code path — zombie turns run server-side with **no current player**, so it throws. Preferred pattern: the `$activePlayerId` magic param (see 2.2/2.3 — works in every case). In single-active states, an act method using `getActivePlayerId()` also survives zombie delegation (the zombie is still the active player)
 - Use `bga_rand()` for the random default move, not `shuffle()`/`rand()`
 - Cannot end game from zombie method — must continue game logic
+- **Declare the Zombie Mode level as metadata before alpha** — BGA defines 4 levels (`https://en.doc.boardgamearena.com/Zombie_Mode#The_different_Zombie_levels`): **0** Passing (no action) · **1** Random (a random legal action) · **2** Greedy (best immediate/visible-information gain) · **3** Smart (can plan or remember hidden info). Fill Game Metadata Manager → **Metadata** tab → "Zombie Mode level" (`0`–`3`) — a missing value blocks "Request ALPHA status" outright (see `references/alpha-release.md`)
+- **Keep every `zombie()` honest about the same declared level** — the metadata field declares one number for the whole game. A truly-random zombie in one state plus a fixed default choice in another mixes level 1 and level 0; upgrade the weaker ones (usually cheap: swap the fixed pick for `bga_rand(0, n-1)`) to match the level you declare
 
 ### Debug tips
 

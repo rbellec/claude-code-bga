@@ -16,10 +16,11 @@ These files are designed to be loaded on demand by Claude Code when implementing
 | Legacy Migration | [legacy-migration.md](legacy-migration.md) | Converting a pre-2025 project to the new framework (files, PHP, JS, order) |
 | Translations | [translations.md](translations.md) | i18n patterns: clienttranslate, _(), i18n array, bga_format |
 | Guidelines | [guidelines.md](guidelines.md) | BGA Studio review standards: layout, accessibility, UX, design |
-| Debug Helpers | [debug-helpers.md](debug-helpers.md) | `debug_<name>` toolbar methods, premium-gate workaround for end-game stats |
+| Debug Helpers | [debug-helpers.md](debug-helpers.md) | `debug_<name>` auto-buttons + toolbar input, premium-gate workaround for end-game stats |
 | Makefile Template | [makefile-template.md](makefile-template.md) | Project setup: check + deploy targets (used once at init) |
 | Rules Clarification | [rules-clarification.md](rules-clarification.md) | Rules analysis process, author Q&A, assumptions tracking (loaded at project start) |
 | PHP Code Quality | [php-code-quality.md](php-code-quality.md) | Optional `make audit` loop: PHP-CS-Fixer, Rector, PHPStan, PHPMD (opt-in) |
+| Alpha Release | [alpha-release.md](alpha-release.md) | Requesting ALPHA status: checklist, images, licensing, zombie level, tags |
 | BGG Submission | [bgg-submission.md](bgg-submission.md) | Producing the BGG entry that unlocks `bgg_id` (used once at release, optional) |
 
 ## PHP (Server-side)
