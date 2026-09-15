@@ -21,6 +21,7 @@ These files are designed to be loaded on demand by Claude Code when implementing
 | Rules Clarification | [rules-clarification.md](rules-clarification.md) | Rules analysis process, author Q&A, assumptions tracking (loaded at project start) |
 | PHP Code Quality | [php-code-quality.md](php-code-quality.md) | Optional `make audit` loop: PHP-CS-Fixer, Rector, PHPStan, PHPMD (opt-in) |
 | Alpha Release | [alpha-release.md](alpha-release.md) | Requesting ALPHA status: checklist, images, licensing, zombie level, tags |
+| Tutorial-Ready Audit | [tutorial-ready.md](tutorial-ready.md) | Making the game tutorial-able: valid replay, manually re-triggerable actions, anchorable DOM (audit to run before alpha) |
 | BGG Submission | [bgg-submission.md](bgg-submission.md) | Producing the BGG entry that unlocks `bgg_id` (used once at release, optional) |
 
 ## PHP (Server-side)

@@ -425,6 +425,7 @@ For detailed API beyond the patterns above, load the relevant reference file.
 | Debug helpers (`debug_<name>`, premium-gate workaround) | `references/debug-helpers.md` | Verifying state mid-game, end-game stats panel showing "Go premium" |
 | Rules clarification process | `references/rules-clarification.md` | Analyzing rules, managing author Q&A |
 | Requesting ALPHA status (checklist, images, licensing, zombie level, tags) | `references/alpha-release.md` | Project plays end-to-end and you're ready to leave "in development" |
+| Tutorial-readiness audit (replay valid, actions re-triggerable, anchorable DOM) | `references/tutorial-ready.md` | Before requesting ALPHA — three conditions absent from the Pre-release checklist |
 | BGG submission helper | `references/bgg-submission.md` | Producing the BGG entry that unlocks `bgg_id` (post-release, optional) |
 
 ---
@@ -722,7 +723,7 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **`setup()` runs before `onEnteringState()`** — render complete initial state in setup using `gamedatas.gamestate.args`
 - **Call `setupPromiseNotifications()`** in `setup()` — auto-detects all `notif_*` methods
 - **In MULTIPLE_ACTIVE_PLAYER states**: active players are NOT active yet in `onEnteringState` — use `onUpdateActionButtons` for active-dependent UI
-- **`performAction` only from user events** — NEVER from notifications, loops, callbacks, or state methods
+- **`performAction` only from user events** — NEVER from notifications, loops, callbacks, or state methods. Beyond double-submits, this is what makes the game *tutorial-able*: a tutorial is an annotated replay whose every action must be re-triggerable by hand (see `references/tutorial-ready.md`)
 - **`slideToObject()` returns dojo animation** — must call `.play()` on the result
 - **Slide methods incompatible with CSS transforms** (scale, zoom, rotate)
 - **Check `bgaAnimationsActive()`** before animating

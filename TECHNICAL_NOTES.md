@@ -153,3 +153,37 @@ During an automated test session this is easy to trigger without noticing: navig
 The shared Studio test accounts can be blocked by a table that is still open — including a table from a **different** Studio project, left over from a previous session. The lobby gives no feedback: the "Create" click just does nothing.
 
 Because there is no error message, this failure mode gets misattributed — either to the automation ("the click didn't register") or to the game code ("hotseat creation is broken"). Before either assumption, find the leftover table (browser history, the bottom-of-page banner, or `/table?table=N`) and click **"Express stop"** on its config page with `window.confirm` overridden. A `quitgame.html` ajaxcall is not sufficient for a game in progress — only Express stop actually frees the accounts.
+
+---
+
+## Why `performAction` must never fire from a notification handler
+
+**Immediate reason (known):** a notification handler runs on every client,
+including spectators and replay viewers. Firing a game action from it means the
+action is sent again by whoever happens to be watching, and in the player's own
+client it races with the action they are about to take — double-submits,
+`_you can't perform this action at this moment_`, or a state advanced twice.
+
+**Later, more expensive reason:** it is what makes a game impossible to write a
+tutorial for. A BGA tutorial is not code — it is the **replay of a real game**,
+annotated by a player with comment bubbles, and the reader is made to **click
+the moves themselves**. The BGA *Tutorials checklist* therefore requires that
+"each action of the replay should be replayable by triggering it manually", and
+names the cause of failure explicitly: `ajaxcall()` / `bgaPerformAction()`
+triggered programmatically from a notification handler or a callback.
+
+The same page names two sibling causes: **several ways to trigger the same
+action with different arguments** (the author reproduces one path, the archive
+recorded another), and **missing `ID`s or overlapping elements** (nothing to
+anchor a bubble to).
+
+**Why it is expensive to find late:** none of these three conditions appears in
+the Pre-release checklist or anywhere in the Studio UI, so a game reaches alpha,
+beta and gold without them ever being checked. They surface when a volunteer
+tries to write a tutorial and gives up. The fix is a **new version of the
+game**, which invalidates the replay the half-written tutorial was built on —
+the author has to start over, unless a *Tutorial game release override* can be
+granted, and that only works if the new version stays compatible with the move
+notifications of the old one.
+
+Audit procedure: `skills/board-game-arena/references/tutorial-ready.md`.

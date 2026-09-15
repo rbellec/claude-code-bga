@@ -117,6 +117,17 @@ project that only ever ran in dev:
   meaningful per-player stats
 - **Remove debug `console.log()`** from the JS client
 
+## Before you click: the tutorial-readiness audit
+
+Three further conditions — valid replay archive, every action re-triggerable
+by hand, every interface element carrying an `ID` and not covered — live on a
+**separate doc page that the Pre-release checklist never mentions**
+(https://en.doc.boardgamearena.com/Tutorials_checklist). They don't block
+alpha, which is exactly why they get discovered a year later, when a volunteer
+tutorial author gives up and the fix requires a new game version. Run
+`references/tutorial-ready.md` now — it is minutes of static analysis plus one
+replay.
+
 ## Workflow summary
 
 1. Work through the Pre-release checklist (code requirements, stats, cleanup)
