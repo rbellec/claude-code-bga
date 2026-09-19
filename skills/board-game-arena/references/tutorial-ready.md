@@ -65,12 +65,16 @@ triage — read each hit before judging):
 rg --line-number 'performAction\(|ajaxcall\(' -g '*.js' -g '!**/node_modules/**' \
   | tee /tmp/bga-action-callsites.txt
 
-# same, annotated with the enclosing function name
+# same, annotated with the enclosing method name (control blocks such as
+# `if (...) {` / `for (...) {` match the same shape — they are skipped so the
+# last real method header wins)
 awk '
-  /^[[:space:]]*(async[[:space:]]+)?[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*\(.*\)[[:space:]]*\{/ {
-      fn=$0; sub(/^[[:space:]]*/,"",fn); sub(/\(.*$/,"",fn)
+  /^[[:space:]]*(async[[:space:]]+)?(function[[:space:]]+)?[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*\(.*\)[[:space:]]*\{/ {
+      fn=$0; sub(/^[[:space:]]*/,"",fn); sub(/^async[[:space:]]+/,"",fn)
+      sub(/^function[[:space:]]+/,"",fn); sub(/[[:space:]]*\(.*$/,"",fn)
+      if (fn !~ /^(if|for|while|switch|catch)$/) enclosing=fn
   }
-  /performAction\(|ajaxcall\(/ { printf "%s:%d  [%s]\n    %s\n", FILENAME, NR, fn, $0 }
+  /performAction\(|ajaxcall\(/ { printf "%s:%d  [%s]\n    %s\n", FILENAME, NR, enclosing, $0 }
 ' $(rg -l 'performAction\(|ajaxcall\(' -g '*.js' -g '!**/node_modules/**')
 ```
 
@@ -83,6 +87,15 @@ awk '
 - a `setTimeout` / `requestAnimationFrame` / `.then()` / `await` continuation
   that is not rooted in a DOM event handler
 - a `forEach` / `for` loop body (batch-firing actions)
+
+**Not a violation — read the hit before judging:** the enclosing method only
+tells you where the code *lives*, not what *fires* it. A call that sits inside
+`onEnteringState` / `onUpdateActionButtons` / a `for` loop but is the callback
+argument of `addActionButton(...)`, `addEventListener('click', ...)` or an
+equivalent user-event registration is user-rooted and fine — the closure is
+*defined* there, it is *fired* by the click. The violation is the call that
+runs synchronously when the method runs, or from a timer / promise
+continuation it starts.
 
 **The classic offender:** auto-play convenience — *"only one legal move, so
 let's play it for the player"* from `onUpdateActionButtons`. It is invisible in
