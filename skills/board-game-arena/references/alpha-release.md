@@ -116,6 +116,17 @@ project that only ever ran in dev:
 - **Player statistics** — a project often has table stats only; add
   meaningful per-player stats
 - **Remove debug `console.log()`** from the JS client
+- **Minified build test** — click "Use minified JS" / "Use minified CSS" on
+  the manage page (after a Studio commit) and play; a game that only runs
+  unminified gets stuck at "Connecting to game" in alpha
+- **Dark mode** — readable with `html[data-theme="dark"]` (see
+  `references/guidelines.md`)
+- **Spectator test** with all test accounts 0–9 in the players group;
+  in-game replay from the log; full "Replay game" after a finished table
+- **Translations** — `&dummyTranslations` on a table URL, "Scan
+  translations" in a dry-run build (`references/translations.md`)
+- **TypeScript/SCSS sources** live in `src/`, not `modules/` (only built
+  files are deployed)
 
 ## Before you click: the tutorial-readiness audit
 
@@ -135,9 +146,16 @@ replay.
    Manager → Media
 3. Fill "Zombie Mode level" (Metadata tab); ensure ≥ 2 tags (Tags tab)
 4. `make deploy` → "Commit & build a new version now"
-5. "Request ALPHA status" → handle the warnings dialog → submit
+5. "Request ALPHA status" → handle the warnings dialog → submit. The
+   Studio walkthrough page (Sept 2026) describes two buttons, **"Request
+   PRIVATE ALPHA status"** (admins check the game starts, you invite
+   testers yourself) and **"Request PUBLIC ALPHA status"**; the Pre-release
+   checklist still names a single "Request ALPHA status" — use whichever
+   the manage page shows
 6. If the game has no publisher: reply to the generated ticket with the
-   licensing rationale (public domain template above)
+   licensing rationale (public domain template above). The ticket reply
+   also carries your **production BGA user name** (to be made game admin
+   in prod) and, for a private alpha, the other admins' user names
 
 ## Pitfalls
 

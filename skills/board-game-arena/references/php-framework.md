@@ -34,9 +34,11 @@ $safe = $this->escapeStringForDB($userInput);
 ```php
 // Basic info
 $this->getPlayerCount();                     // total players
-$this->getActivePlayerId();                  // current turn holder
-$this->getCurrentPlayerId();                 // requester (actions + getAllDatas only!)
-$this->loadPlayersBasicInfos();              // cached player array
+$this->getActivePlayerId();                  // current turn holder — returns a STRING; prefer the magic int $activePlayerId
+$this->getCurrentPlayerId($bReturnNullIfNotLogged = false); // requester — STRING, throws when no one is logged (zombie,
+                                             // setupNewGame, args methods); prefer magic int $currentPlayerId (SKILL 2.3)
+$this->isCurrentPlayerZombie();
+$this->loadPlayersBasicInfos();              // cached player array (player_no, player_zombie, player_eliminated, …)
 $this->getPlayerNameById($pid);
 $this->getPlayerColorById($pid);
 $this->getPlayerNameByNo($no);               // by seat number ("player no", 1-based turn order)
@@ -66,7 +68,7 @@ $this->gamestate->setAllPlayersMultiactive();
 $this->gamestate->setPlayersMultiactive($ids, $next, $exclusive);
 $this->gamestate->setPlayerNonMultiactive($pid, $next);   // returns true when it moved to $next
 $this->gamestate->updateMultiactiveOrNextState($next);     // go to $next if nobody is active any more
-$this->gamestate->getActivePlayerList();     // array of active player IDs
+$this->gamestate->getActivePlayerList();     // active player IDs — as strings, cast them
 $this->gamestate->isPlayerActive($pid);      // check
 
 // Current state as an object
@@ -85,10 +87,11 @@ $this->gamestate->getCurrentStateClass($playerId);   // the player's private sta
 $this->gamestate->nextState('transitionName');
 $this->gamestate->jumpToState($stateId);     // advanced — skip transition
 
-// In new framework state classes — return from act methods:
-return NextState::class;                     // preferred
-return 99;                                   // by ID
-return 'transitionName';                     // legacy compatibility
+// In new framework state classes — return from act methods / onEnteringState:
+return NextState::class;                     // preferred (method typed `: string`)
+return 99;                                   // by ID — only from a method NOT typed `: string` (strict_types)
+return GameResult::coop(score: $s, win: $won); // from the end-score state: ends the game (see Scoring)
+// 'transitionName' strings only resolve on states declaring `transitions` (legacy states.inc.php)
 
 // Reload cached state after manual DB manipulation
 $this->gamestate->reloadState();
@@ -108,6 +111,7 @@ public function actPlayCard(int $cardId): string { ... }
 
 #[PossibleAction]
 public function actSelectCards(#[IntArrayParam] array $ids): string { ... }
+// If the array may be empty: type it `#[IntArrayParam] ?array $ids` and treat null as []
 
 #[PossibleAction]
 public function actMove(#[StringParam(enum: ['up','down','left','right'])] string $dir): string { ... }
@@ -125,6 +129,10 @@ public function actCancel(): string { ... }
 ```
 
 **Reserved (magic) parameter names** — the framework auto-fills these in act methods, so they can never carry client-sent values: `array $args` (the state's own `getArgs()` result — validate client input against it rather than recomputing), `$activePlayerId`/`$active_player_id`, `$activePlayerNo`/`$active_player_no`, `$currentPlayerId`/`$current_player_id`, `$currentPlayerNo`/`$current_player_no`. (In PRIVATE-state `getArgs`/`onEnteringState`, `$playerId`/`$player_id`/`$playerNo`/`$player_no` are magic too.)
+
+## Inside a State Class
+
+`GameState` exposes the framework sub-objects directly — `$this->bga`, `$this->notify`, `$this->globals`, `$this->tableOptions`, `$this->userPreferences`, `$this->tableStats`, `$this->playerStats`, `$this->deckFactory`, `$this->counterFactory`, `$this->playerScore`, `$this->playerScoreAux`, `$this->gamestate` — so `$this->notify->all(...)` and `$this->game->bga->notify->all(...)` are equivalent. Constructor options beyond `id`/`type`: `updateGameProgression: true` (recompute `getGameProgression()` when entering), `initialPrivate: PrivateX::class`, `description` / `descriptionMyTurn` (status-bar texts, `clienttranslate`d; the scaffold sets them client-side with `statusBar.setTitle` instead).
 
 ## Private Parallel States
 
@@ -175,6 +183,11 @@ return GameResult::coop($players /* or null = all */, score: $teamScore, win: $w
 
 // Solo (internally a coop result of one player) — see "solo_mode_ranked" in gameinfos
 return GameResult::solo($playerId /* or null = the only player */, score: $score, win: $won);
+
+// Where: return the GameResult from the END-SCORE state (98, GAME type) instead of `return 99;`
+// — returning a GameResult from a state class ends the game. Plain `return 99` keeps the
+// default ranking by player_score / player_score_aux.
+use Bga\GameFramework\GameResult\GameResult;
 
 // Elimination (mid-game removal)
 $this->eliminatePlayer($pid);
@@ -268,6 +281,8 @@ use Bga\GameFramework\VisibleSystemException;
 
 // User error — rolls back DB, prevents notifications, shows error to player
 throw new UserException(clienttranslate('You cannot do that'));
+// With placeholders: message + args through a NotificationMessage
+throw new UserException(new NotificationMessage(clienttranslate('You need ${n} more coins'), ['n' => $missing]));
 
 // System error — shows to player, triggers reload (untranslated, devs only)
 throw new VisibleSystemException('Something broke');
@@ -316,17 +331,29 @@ public function debug_playOneMove() {
 ## Database Migrations (post-release)
 
 ```php
-public function upgradeTableDb(string $fromVersion): void {
-    if (version_compare($fromVersion, '2504151200', '<')) {
-        $this->DbQuery("ALTER TABLE my_table ADD COLUMN new_col INT DEFAULT 0");
+// Param stays UNTYPED (parent declares it so); it is the int version "YYMMDDHHMM" without the dash
+public function upgradeTableDb($from_version) {
+    if ($from_version <= 2504151200) {
+        // DBPREFIX_ is mandatory: the query is replayed on every running table's DB
+        $this->applyDbUpgradeToAllDB("ALTER TABLE `DBPREFIX_mygame_board` ADD COLUMN `new_col` INT DEFAULT 0");
     }
 }
+// ItemManager tables: $this->items->upgradeTableDbAddColumns(['newField']) — see references/item-manager.md
+// Test it from Studio with a debug helper: public function debug_testUpgradeTableDb(int $v = 0) { $this->upgradeTableDb($v); }
+```
+
+## Environment & moderation
+
+```php
+$this->getBgaEnvironment();          // 'studio' | 'prod' — guard debug_* helpers
+$this->logTextForModeration($playerId, $text); // any free text a player can type (names, messages)
 ```
 
 ## Pitfalls
 
 - **DB values are strings** — always cast: `(int)$row['value']`
-- **`getCurrentPlayerId()` only in actions and `getAllDatas()`** — "Not logged" errors elsewhere
+- **`getCurrentPlayerId()` only in actions and `getAllDatas()`** — "Not logged" errors elsewhere; returns a string — prefer the magic `int $currentPlayerId` / `$activePlayerId` params (SKILL 2.3)
+- **Deck is deprecated** — new projects use ItemManager (`references/item-manager.md`)
 - **`getCollectionFromDb` keys by first column** — duplicates silently overwrite
 - **`getObjectListFromDB`** — use for simple arrays without key issues
 - **Active player changes only in GAME states** — not in ACTIVE_PLAYER states

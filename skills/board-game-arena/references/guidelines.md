@@ -46,6 +46,14 @@
 - **No flashing/rapid visuals**
 - **Label all buttons** for screen readers
 
+## Dark Mode (live since July 2026)
+
+- BGA toggles dark mode per player (avatar menu before a game, hamburger menu during) and sets **`html[data-theme="dark"]`** — style on that attribute, **not** on `@media (prefers-color-scheme: dark)`, which would ignore the BGA toggle
+- Most games work out of the box; the classic break is a fixed light background without a text color → add `color: black` on those elements
+- Backgrounds: `html[data-theme="dark"] { background: url('img/dark-bg.jpg'), #1d1d1d; }`, or `background-blend-mode: color-burn` on the light image as a cheap approximation; player-panel color via `--game-bga-player-panel-background`
+- "Automatic / Light / Dark" background preference pattern: a `gamepreferences` entry mirrored into `html[data-background]` from `this.bga.userPreferences.onChange`, combined with `[data-theme]` in CSS
+- **Pre-release checklist item:** test the game in dark mode
+
 ## CSS Conventions
 
 - **Prefix CSS classes** with game name: `mygame_selected`, `mygame_token`
@@ -76,6 +84,8 @@
 - **Calculate game progression accurately** (0-100%) — accounts for multiple end conditions
 - **Handle disconnects smoothly** — short, friendly messages; never expose stack traces
 - **Namespace everything:** PHP namespace, CSS prefix, no global JS vars
+- **Images:** WebP whenever possible (lightweight, transparent); sprites for multiple images; ≤ 4 MB per image, ≤ 15 MB total; fonts (freeware + license .txt) in `fonts/`, sounds (.mp3 or .ogg) in `sounds/`
+- **Mobile:** declare the real `game_interface_width.min`, let `autoscale` do the rest, restack with media queries (see `references/gameinfos-jsonc.md`)
 
 ## Code Conventions
 

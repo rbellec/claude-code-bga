@@ -47,9 +47,10 @@ Unlike the strict-JSON config files (`stats.json`, `gameoptions.json`, `gamepref
 
     "disable_player_order_swap_on_rematch": false,
 
-    // Game interface width range (left area, without the right column)
+    // Game interface width (left area, without the right column) — see "Mobile" below
     "game_interface_width": {
-        "min": 740                          // 320–740; lower = better mobile display
+        "min": 740,                         // smallest width at which the game is USABLE (default 740)
+        "autoscale": true                   // true (default) | false | "viewport"
     },
 
     // Turn PHP warnings into exceptions — keep true: warnings otherwise corrupt
@@ -57,6 +58,16 @@ Unlike the strict-JSON config files (`stats.json`, `gameoptions.json`, `gamepref
     "exception_on_warning": true
 }
 ```
+
+## Mobile: `game_interface_width` and autoscale
+
+Doc: https://en.doc.boardgamearena.com/Your_game_mobile_version
+
+- `min` — the smallest logical width the interface genuinely works at (default 740). Declare 540 only if everything is usable at 540. Below ~490 px player panels lose their two-column mobile layout.
+- `autoscale: true` (default) — when the screen is narrower than `min`, BGA applies CSS `zoom` to the game area (top bar, dialogs and tooltips keep their size). Geometry inside the zoomed area: `this.bga.gameui.getBoundingClientRectIgnoreZoom(el)`; the framework's own animation helpers already compensate.
+- `autoscale: false` — not recommended; only if the game handles narrow screens itself (responsive CSS or BgaZoom, `references/bga-zoom.md`).
+- `autoscale: "viewport"` — compatibility fallback that scales the whole page; not for new code. Legacy `this.default_viewport = "width=740"` has the same effect and must not be used any more.
+- Autoscale is not responsiveness: keep `min` small, use `@media (max-width: …)` to restack elements, and the `mobile_version` / `desktop_version`, `touch-device` / `notouch-device` classes on `#ebd-body` (prefix hover-only rules with `.notouch-device`).
 
 ## Correspondence with the legacy `gameinfos.inc.php`
 

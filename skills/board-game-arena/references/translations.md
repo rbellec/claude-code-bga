@@ -14,7 +14,7 @@ become available once your game enters beta.
 
 | Place | URL | Purpose |
 |---|---|---|
-| **Studio Control Panel** (per game) | `studio.boardgamearena.com` → your game | Code, deploy, debug, options, **"Display dummy translation" button** (see below) |
+| **Studio Control Panel** (per game) | `studio.boardgamearena.com` → your game | Code, deploy, debug, options; "Dry run build" → **Scan translations** lists every extracted key |
 | **Translation Center** (global) | https://en.boardgamearena.com/translationhq | The actual place where translators (and you) type translations per language |
 
 ### Lifecycle
@@ -35,16 +35,13 @@ become available once your game enters beta.
 3. **Production** — validated translations are served at runtime based on the
    player's language.
 
-### What "Display dummy translation" actually does
+### Testing translations on Studio (`&dummyTranslations`)
 
-It is a **debug tool**, not an editor. It scans your code and replaces every
-`_()` / `clienttranslate()` site with a dummy marker at runtime. Use it to:
+The old "Display dummy translation" block of the manage page was removed (Q3 2026). The replacement is a URL flag: on a Studio **table page**, append `&dummyTranslations` to the URL. Every front-side translated string (`_()` on the client, `clienttranslate()`d texts rendered by the client) displays wrapped in `«»` — anything shown in bare English is an i18n bug. It no longer exercises PHP-side `$this->_()` calls.
 
-- Verify visually that **all** user-facing strings are wrapped
-- Detect strings that escape and stay in raw English (= i18n bug)
-- It is the runtime equivalent of the static `Check project` analysis
+For the static view, run a **Dry run build** from the manage page: its "Scan translations" section lists all extracted keys exactly as translators will see them (spell-check them there). The former "Check project" button is obsolete.
 
-Run it systematically before pushing to beta.
+Run both before requesting beta.
 
 ## Core Functions
 

@@ -20,7 +20,7 @@ You are helping implement a board game on Board Game Arena Studio, using the **n
 - Chrome extension "Claude in Chrome" connected
 - `make check` and `make deploy` working in the project directory
 - Game rules document available (provided by user)
-- Graphics / assets available in `img/` (SVG preferred)
+- Graphics / assets available in `img/` (SVG, or WebP for bitmaps — BGA recommends WebP; sounds as `.mp3`/`.ogg` in `sounds/`)
 - Git repository initialized (or empty directory — will be initialized in step 1.3)
 
 ---
@@ -50,15 +50,20 @@ modules/php/Game.php              — main class
 modules/php/material.inc.php      — constants, tile costs, static data
 modules/php/States/               — one .php file per game state
 modules/js/Game.js                — ES6 client (must export class named exactly `Game`)
-stats.json                        — statistics config
-gameoptions.json                  — game options config
-gamepreferences.json              — player preferences config
-gameinfos.inc.php                 — game metadata
-dbmodel.sql                       — custom MySQL tables
+stats.json(c)                     — statistics config
+gameoptions.json(c)               — game options config
+gamepreferences.json(c)           — player preferences config
+gameinfos.jsonc                   — game metadata (`gameinfos.inc.php` on older projects)
+dbmodel.sql                       — custom MySQL tables (not needed for ItemManager-managed items)
 GAMENAME.css                      — styles
-img/                              — assets (SVG, PNG)
+img/                              — assets (SVG, WebP, PNG)
+sounds/                           — optional .mp3/.ogg, autoloaded
+_ide_helper.php, bga-framework.d.ts — generated API stubs (never edit; see 1.1)
+package.json, tsconfig.json, rollup.config.mjs, src-disabled/ts/  — optional TypeScript toolchain shipped by the scaffold
 Makefile                          — check + deploy targets
 ```
+
+The scaffold ships an **optional TypeScript setup**: `src-disabled/ts/Game.ts` + `types.d.ts`, built by `npm run build:ts` (rollup) into `modules/js/Game.js`. Rename `src-disabled/` to `src/` and `npm i` to use it; delete the four TS files to stay in plain JS (this skill's examples are plain JS). Deploy only `modules/`, never `src/`.
 
 ### 1.3 Makefile and git init
 
@@ -118,28 +123,32 @@ class Game extends Table
 
     public function __construct() {
         parent::__construct();
-        // Minimal — do NOT call initGameStateLabels here
+        // Create components here (counters, ItemManager/Deck) — NOT in initTable.
+        // initGameStateLabels is @deprecated: use $this->bga->globals instead.
     }
 
     protected function initTable(): void {
-        // Using $this->bga->globals for all state (any type, JSON-serialized)
-        // initGameStateLabels is legacy and int-only — avoid it
+        // Rarely needed. All game state goes through $this->bga->globals (any type, JSON-serialized)
     }
 
     protected function setupNewGame($players, $options = []): mixed {
         // Keep the params UNTYPED — the parent declares them untyped, adding
         // `array` would be an incompatible override. `$options` = table options.
-        // 1. Set player colors
-        $colors = $this->getGameinfos()['player_colors'];
+        // 1. INSERT the player rows yourself (the table is empty here) — scaffold pattern
+        $gameinfos = $this->getGameinfos();
+        $colors = $gameinfos['player_colors'];
+        $values = [];
         foreach ($players as $pid => $player) {
-            $color = array_shift($colors);
-            $this->DbQuery("UPDATE player SET player_color='$color' WHERE player_id='$pid'");
+            $values[] = vsprintf("(%s, '%s', '%s')", [$pid, array_shift($colors), addslashes($player['player_name'])]);
         }
-        // 2. reloadPlayersBasicInfos BEFORE any INSERT or initStat
+        $this->DbQuery("INSERT INTO `player` (`player_id`, `player_color`, `player_name`) VALUES " . implode(',', $values));
+        $this->reattributeColorsBasedOnPreferences($players, $gameinfos['player_colors']);
+        // 2. reloadPlayersBasicInfos BEFORE any custom INSERT or stat init
         $this->reloadPlayersBasicInfos();
-        // 3. Custom tables
-        // 4. initStat
-        return StartState::class;
+        // 3. Components: $this->items->initDb() (ItemManager), counters ->initDb(), custom tables
+        // 4. $this->bga->tableStats->init(...) / playerStats->init(...)
+        $this->activeNextPlayer();
+        return PlayerTurn::class;
     }
 
     public function getAllDatas(int $currentPlayerId): array {
@@ -162,7 +171,7 @@ class Game extends Table
 - **Globals:** use `$this->bga->globals->set/get` (any type, JSON-serialized). `initGameStateLabels` is legacy and **int-only** — these are two distinct systems, do not mix them
 - `material.inc.php` is auto-included by the framework — **never** `include()` it manually
 - **Extra PHP classes are autoloaded**: `modules/php/MyClass.php` in the game namespace (`Bga\Games\GameName`) loads without any `require` (PSR-4 mapping from `modules/php/`). Ideal for a pure rules/geometry class, unit-testable locally without the framework
-- No `self::` on instance methods — PHP 8.4 generates warnings that corrupt JSON output. Use `$this->` everywhere. (`self::CONST` for class constants is fine)
+- Use `$this->` for framework methods. PHP 8.4 warns on `self::`/`static::` calls to **non-static** methods (`getPlayerNameById`, `activeNextPlayer`, …) and the warning corrupts the JSON response. The DB helpers (`DbQuery`, `getObjectFromDB`, …) are declared static — the scaffold's `static::DbQuery` is fine — but `$this->` works for all of them, so use it uniformly. (`self::CONST` is fine)
 - `{$var}` not `${var}` in strings (PHP 8.4)
 - `implode(separator, array)` not `implode(array, separator)` (PHP 8.4)
 
@@ -184,21 +193,35 @@ use Bga\Games\GameName\Game;
 class PlayerTurn extends GameState
 {
     function __construct(protected Game $game) {
-        // Only id and type — NO name, description, or transitions
+        // id + type are required. Optional named args: updateGameProgression: true
+        // (recompute getGameProgression here), initialPrivate: PrivateX::class,
+        // description / descriptionMyTurn (status-bar text; the scaffold sets it in JS instead).
+        // No transition names, no `name` — class-based transitions replace them.
         parent::__construct($game, id: 20, type: StateType::ACTIVE_PLAYER);
     }
 
-    public function onEnteringState(array $args): void { }
+    // State args sent to the client (gamedatas.gamestate.args / JS state class args)
+    public function getArgs(): array {
+        return ['playableIds' => $this->game->getPlayableIds()];
+    }
+
+    // Hooks take magic params too: int $activePlayerId, array $args …
+    // In a GAME state, onEnteringState does the work and RETURNS the next state class.
+    public function onEnteringState(int $activePlayerId) { }
 
     #[PossibleAction]
-    public function actDoSomething(string $param, int $activePlayerId): string {
-        // $activePlayerId is a MAGIC param: autowired by the framework, never sent
-        // by the client. Do NOT call getCurrentPlayerId() here — it fails when
-        // zombie() delegates to this method (server-side call, no current player).
-        // validate...
+    public function actDoSomething(string $param, int $activePlayerId, array $args): string {
+        // $activePlayerId and $args are MAGIC params: autowired by the framework, never
+        // sent by the client ($args = this state's getArgs()). Do NOT call
+        // getCurrentPlayerId() here — it fails when zombie() delegates to this method
+        // (server-side call, no current player).
+        if (!in_array($param, $args['playableIds'])) {
+            throw new UserException(clienttranslate('Invalid choice'));
+        }
         // do work...
-        // Send notification for every action
-        $this->game->bga->notify->all('somethingDone', clienttranslate('${player_name} did something'), [
+        // Send notification for every action. Inside a state class, $this->notify,
+        // $this->globals, $this->playerStats… are shortcuts for $this->game->bga->*
+        $this->notify->all('somethingDone', clienttranslate('${player_name} did something'), [
             'player_id' => $activePlayerId,
             'player_name' => $this->game->getPlayerNameById($activePlayerId),
         ]);
@@ -220,33 +243,38 @@ class PlayerTurn extends GameState
 ```
 
 **Critical state rules:**
-- State constructor takes ONLY `id` and `type` — no name, description, or transitions
+- State constructor: `id` + `type` required; `updateGameProgression`, `initialPrivate`, `description(MyTurn)` optional; never `name`/`transitions`
 - Act methods return the **next state class** (e.g., `return ResolveAction::class`)
 - This applies to BOTH `ACTIVE_PLAYER` and `MULTIPLE_ACTIVE_PLAYER` states
-- For `MULTIPLE_ACTIVE_PLAYER`: the framework automatically waits for all players when the action returns a state class
-- **Never** use `setPlayerNonMultiactive($id, 'transitionName')` — transition names don't exist in the new framework
-- **Never** override `argGameEnd()` or `stGameEnd()` — they are `final`. Use a state 98 (`computeScores`) instead
-- State IDs 1 and 99 are reserved (gameSetup, gameEnd)
+- For `MULTIPLE_ACTIVE_PLAYER`: the framework automatically waits for all players when the action returns a state class. `setPlayerNonMultiactive($id, NextState::class)` is also valid — a transition **name** string is not (`This transition (X) is impossible`)
+- **Ending the game:** state 99 is framework-owned. Compute scores in a GAME state 98 (`EndScore`) and `return 99` from its `onEnteringState` — or return a `GameResult` (`GameResult::coop(...)`, `::solo(...)`, see `references/php-framework.md`), which ends the game with a win/loss outcome
+- A method that may return the int `99` must not be typed `: string` (strict_types TypeError); type act methods `: string` only when they always return a class name
+- State IDs 1 and 99 are reserved (gameSetup, gameEnd); `StateType` is `ACTIVE_PLAYER | MULTIPLE_ACTIVE_PLAYER | PRIVATE | GAME | MANAGER`
 
-### 2.3 Who is acting? — ACTIVE_PLAYER vs MULTIPLE_ACTIVE_PLAYER
+### 2.3 Who is acting? — magic player params
 
-In **ACTIVE_PLAYER** states, declare the magic `int $activePlayerId` parameter (autowired, see 2.2) and never call `getCurrentPlayerId()` in the act method — the magic param is what keeps zombie delegation working.
+Never call `getCurrentPlayerId()` / `getActivePlayerId()` inside an act method: they return **strings**, and `getCurrentPlayerId()` throws on the zombie code path (server-side call, no current player). Declare the matching **magic parameter** instead — autowired as an `int`, never sent by the client:
 
-In **MULTIPLE_ACTIVE_PLAYER** states there is no single active player, so `$activePlayerId` is not usable. Use `getCurrentPlayerId()`:
+| State type | Magic param | Also available |
+|---|---|---|
+| `ACTIVE_PLAYER` | `int $activePlayerId` | `int $activePlayerNo` |
+| `MULTIPLE_ACTIVE_PLAYER`, `PRIVATE` | `int $currentPlayerId` | `int $currentPlayerNo` |
 
 ```php
-// ✗ Wrong in a multiactive state — no single active player to autowire
-public function actChoose(int $activePlayerId, string $choice): string { ... }
+// Multiactive state — the magic param replaces getCurrentPlayerId()
+#[PossibleAction]
+public function actChoose(string $choice, int $currentPlayerId): string {
+    $this->game->recordChoice($currentPlayerId, $choice);
+    $this->gamestate->setPlayerNonMultiactive($currentPlayerId, Resolve::class);
+    return Resolve::class;   // framework waits for the other active players
+}
 
-// ✓ Correct in a multiactive state
-public function actChoose(string $choice): string {
-    $playerId = $this->game->getCurrentPlayerId(); // framework provides it
-    ...
-    return NextState::class;
+public function zombie(int $playerId): string {
+    return $this->actChoose($this->getRandomZombieChoice(['a', 'b']), $playerId); // works: plain param
 }
 ```
 
-Consequence for zombies of multiactive states: `zombie($playerId)` cannot delegate to such an act method (it would hit `getCurrentPlayerId()` with no current player). Extract the shared logic into a helper taking an explicit `$playerId`, called by both.
+Because the player id is an ordinary parameter, `zombie($playerId)` can delegate to the act method in **both** state types. (`$activePlayerId` in a multiactive state is meaningless — there is no single active player.)
 
 ### 2.4 New framework API
 
@@ -266,11 +294,13 @@ $this->bga->notify->player($pid, 'eventName', clienttranslate('msg'), [...]);
 $this->bga->tableStats->inc('turns_played', 1);
 $this->bga->playerStats->inc('tiles_placed', 1, $pid);
 
-// Scores (write before transitioning to state 99)
+// Scores (write before transitioning to state 99; or return a GameResult from state 98 — php-framework.md)
 $this->bga->playerScore->set($pid, $score);
+$this->bga->playerScoreAux->set($pid, $tieBreaker);
 
 // DB helpers
-$rows = $this->getCollectionFromDb("SELECT * FROM my_table");  // not getObjectListFromDB(sql, true) — broken
+$rows = $this->getCollectionFromDb("SELECT * FROM my_table");  // keyed by FIRST column (must be unique)
+$list = $this->getObjectListFromDB("SELECT * FROM my_table");   // plain list; (sql, true) flattens a 1-column query to values
 $row  = $this->getObjectFromDB("SELECT * FROM my_table WHERE id=$id");
 ```
 
@@ -280,13 +310,14 @@ When you need a game component, check this table FIRST. Each library has a detai
 
 | Need | Library | Reference | Side |
 |------|---------|-----------|------|
-| Cards/tiles (server logic) | **Deck** | `references/deck.md` | PHP |
+| Cards / tiles / tokens as typed objects in DB (server) | **ItemManager** | `references/item-manager.md` | PHP |
+| Cards (server) on a pre-2026 project | Deck — **deprecated** | `references/deck.md` | PHP |
 | Cards/tiles (client display) | **BgaCards** | `references/bga-cards.md` | JS |
 | Per-player counters (money, resources) | **PlayerCounter** | `references/player-table-counter.md` | PHP |
 | Game-wide counter (round, phase) | **TableCounter** | `references/player-table-counter.md` | PHP |
 | Numeric display with animation | **Counter** | `references/counter.md` | JS |
 | Dice rolling & display | **BgaDice** | `references/bga-dice.md` | JS |
-| Item collections (hand, market) | **Stock** | `references/stock.md` | JS |
+| Item collections (hand, market) on a legacy project | Stock — **deprecated**, use BgaCards | `references/stock.md` | JS |
 | Token placement areas | **Zone** | `references/zone.md` | JS |
 | Scrollable/infinite board | **Scrollmap** | `references/scrollmap.md` | JS |
 | Move animations & scoring | **BgaAnimations** | `references/bga-animations.md` | JS |
@@ -294,8 +325,12 @@ When you need a game component, check this table FIRST. Each library has a detai
 | Auto-size text on cards | **BgaAutofit** | `references/bga-autofit.md` | JS |
 | Collapsible sections | **ExpandableSection** | `references/expandable-section.md` | JS |
 | Drag-and-drop (legacy) | **Draggable** | `references/draggable.md` | JS |
+| Zoom controls + auto-fit of a wide play area | **BgaZoom** | `references/bga-zoom.md` | JS |
+| Shortcuts to many boards (only when they don't fit the screen) | **BgaJumpTo** | `references/bga-jump-to.md` | JS |
 
 > **Workflow:** identify the need → find the library in the table → read `references/<file>.md` → implement using the patterns from the reference.
+>
+> ESM libraries load with `const BgaX = await importEsmLib('bga-x', '1.x');` — **at the top of `Game.js`, before any class declaration**. Deck and Stock were deprecated in October 2026: use them only on projects that already depend on them.
 
 ### 2.6 Game.js structure
 
@@ -419,7 +454,7 @@ $gameinfos = [
 ];
 ```
 
-Config rules: no comments in JSON, no trailing commas, names are auto-translated (no `totranslate()` needed). After changes: deploy AND reload via BGA Studio manage page.
+Config rules: `.json` is strict (no comments, no trailing commas); any of the four files may be renamed `.jsonc` to allow `//` comments (recent scaffolds ship `stats.jsonc`, `gameoptions.jsonc`, `gamepreferences.jsonc`, `gameinfos.jsonc`). Names are auto-translated (no `totranslate()` needed). After changes: deploy AND reload via BGA Studio manage page.
 
 ### 2.8 BGA Framework — Deep Reference
 
@@ -570,6 +605,8 @@ input.dispatchEvent(new Event('input', {bubbles: true}));
 document.getElementById('debugParamDlgApply').click();
 ```
 
+**Counters & globals popups:** the Studio debug menu also offers popups to edit `player_score`, `player_score_aux`, any `PlayerCounter`/`TableCounter`, and every `$this->bga->globals` value live — no `debug_*` helper needed for those.
+
 **Full SQL/request logs** (best for stack traces):
 `/1/GAME_NAME/GAME_NAME/logaccess.html?table=N`
 
@@ -586,7 +623,7 @@ account (free in dev), or use a `debug_dumpStats` helper to read stats live.
 
 ## Reload BGA Studio configs
 
-After changing `stats.json`, `gameoptions.json`, `gamepreferences.json`, or `gameinfos.inc.php`:
+After changing `stats.json(c)`, `gameoptions.json(c)`, `gamepreferences.json(c)`, or `gameinfos.jsonc` / `.inc.php`:
 
 ```
 mcp__claude-in-chrome__navigate(tabId, url: "https://studio.boardgamearena.com/studiogame?game={GAME_NAME}")
@@ -652,16 +689,16 @@ Array.from(document.querySelectorAll('a')).find(a => a.href.match(/lobby\?game=\
 
 | Error | Fix |
 |-------|-----|
-| `reflexion_time cannot be initialized` | Move `initGameStateLabels` from constructor to `initTable()` |
+| `reflexion_time cannot be initialized` | Observed with `initGameStateLabels` in the constructor. Drop it — it is `@deprecated` — and use `$this->bga->globals` |
 | `Constant X already defined` | Migrate to `public const` on the `Game` class (see 2.1). For legacy code that must keep `define()`, guard each one: `defined('X') \|\| define('X', …)` |
 | `Access level must be public` | `getAllDatas`, `getGameProgression` must be `public` (the scaffold ships `getAllDatas` as `protected` — widen it) |
 | `Invalid id for state class` | Delete scaffold state files from server via SFTP |
 | `Unknown statistic id` | Reload statistics via BGA Studio manage panel |
-| `This transition (X) is impossible` | Return state class from act method instead of calling `setPlayerNonMultiactive(id, 'name')` |
+| `This transition (X) is impossible` | A transition **name** was passed to a class-based state. Return the state class from the act method, or pass `NextState::class` (not a name) to `setPlayerNonMultiactive` |
 | `too many authentication failures` | Add `-o IdentitiesOnly=yes` to SSH/SCP commands |
 | Scores not showing at game end | Write scores with `$this->bga->playerScore->set($pid, $score)` in state 98, not state 99 |
 | `Unknown column 'X' in 'field list'` | Check (a) inline `--` comments in `dbmodel.sql` (see "No SQL Comments"); (b) the table was created from an older `dbmodel.sql` — BGA does not auto-migrate (see "BGA Schema Changes During Development"); (c) the name is reserved (see "Table Name Conflicts"). |
-| `static::DbQuery` or `self::DbQuery` | PHP 8.4 warns on static calls to instance methods, corrupting JSON. Always use `$this->DbQuery(...)`. Same applies to all other DB helpers. |
+| `self::getPlayerNameById(...)` (any `self::`/`static::` call to a non-static method) | PHP 8.4 warns on static calls to instance methods, corrupting JSON. Use `$this->` for every framework method (the DB helpers are declared static and tolerate `static::`, but `$this->` is always right). |
 | Logic bug: graph/query silently missing rows | `getCollectionFromDb()` uses the **first selected column** as the PHP array key — duplicate values silently overwrite each other. Always put a unique column (e.g., `id`, `move_number`) first: `SELECT move_number, from_position, to_position FROM ...` not `SELECT from_position, to_position FROM ...`. |
 
 ---
@@ -728,8 +765,10 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **Reserved (magic) action parameter names** — auto-filled by the framework, never use them for client-sent arguments: `$args`, `$activePlayerId`/`$active_player_id`, `$activePlayerNo`/`$active_player_no`, `$currentPlayerId`/`$current_player_id`, `$currentPlayerNo`/`$current_player_no`
 - **`escapeStringForDB($str)`** — mandatory for any player-supplied string in SQL
 - **Use `clienttranslate()`** for all notification messages — literal text only, no variables inside
-- **Wrap `UserException` messages** in `clienttranslate()` — they're displayed to the player. `SystemException` / `VisibleSystemException` go to server logs and stay untranslated. See `references/translations.md` for the full i18n workflow (alpha vs beta, "Display dummy translation" debug button, raw-value-vs-translated-label pattern)
-- **`PlayerStats::init` has no `$playerId`** — signature is `init($name, $value, bool $updateTableStat = false)`. Passing a player ID silently casts to `true` and crashes `setupNewGame`. Inits all players in one call — no loop. (`inc`/`set` DO take `$playerId`.)
+- **Wrap `UserException` messages** in `clienttranslate()` — they're displayed to the player; with placeholders use `new UserException(new NotificationMessage(clienttranslate('Need ${n} more'), ['n' => $n]))`. `SystemException` / `VisibleSystemException` go to server logs and stay untranslated. See `references/translations.md` for the full i18n workflow (alpha vs beta, the `&dummyTranslations` URL check, raw-value-vs-translated-label pattern)
+- **`PlayerStats::init` has no `$playerId`** — signature is `init($nameOrNames, $value, bool $updateTableStat = false)`. A player ID lands in `$updateTableStat` (TypeError under `strict_types`, silently `true` otherwise) and crashes `setupNewGame`. Inits all players in one call — no loop. (`inc`/`set` DO take `$playerIdOrNo`.)
+- **Deck and Stock are deprecated (Oct 2026)** — new games store items with **ItemManager** (`references/item-manager.md`, no `dbmodel.sql` table needed) and display cards with BgaCards
+- **Guard `debug_*` helpers** with `$this->getBgaEnvironment() === 'studio'` if they must never run in production
 
 ### JavaScript / Client
 
@@ -744,6 +783,8 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **Hotseat shares `gamedatas`** across players — no per-player client data
 - **Read-only detection**: `isCurrentPlayerSpectator() || typeof g_replayFrom != 'undefined' || g_archive_mode`; tutorial mode: `typeof g_tutorialwritten != 'undefined'`
 - **Prefix CSS classes** with game name — e.g., `mygame_selected`, not `selected`
+- **Dark mode is live** — BGA sets `html[data-theme="dark"]` (player toggle, not the OS media query). Any element you give a fixed light background needs an explicit `color`; test the game in dark mode (pre-release checklist item). See `references/guidelines.md`
+- **`importEsmLib(...)` calls go at the top of `Game.js`**, before any class declaration
 - **`attachToNewParent` returns a NEW element** — the old reference (and its listeners) is invalid afterwards; use the return value
 - **Never call setState in notifications** — causes race conditions and breaks replays
 
@@ -763,3 +804,7 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - **Temporary debug actions** (`#[PossibleAction]`) are effective for testing end-game / specific positions — call from the console with `gameui.bga.actions.performAction('actDebugX', {...}, { checkAction: false })` (`ajaxcall` is deprecated for game actions); remove before commit
 - **Full SQL/request logs**: `/1/GAME_NAME/GAME_NAME/logaccess.html?table=N`
 - **CSS state class**: `#overall-content` gets `.gamestate_playerTurn` etc. — use for conditional visibility without JS
+
+---
+
+Found a new pitfall while developing? Open an issue on https://github.com/rbellec/claude-code-bga — your field report helps the next user.

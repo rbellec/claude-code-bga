@@ -17,7 +17,7 @@ public function __construct() {
     $this->roundCounter = $this->counterFactory->createTableCounter('round');
     // Full factory signature: createPlayerCounter(string $name, ?int $min = 0,
     //   ?int $max = null, CounterVisibility $visibility = VISIBLE, bool $useNo = false, ?bool $strict = null)
-    // min/max bound the counter; visibility 'self'/'private' hides values (see Pitfalls);
+    // min/max bound the counter; visibility CounterVisibility::VISIBLE | SELF | HIDDEN (see Pitfalls);
     // useNo = address players by seat number instead of id; strict = throw when the
     // id/no passed to get/set/inc is unknown (also ->setUseNo() / ->setStrict() later)
 }
@@ -26,10 +26,11 @@ public function __construct() {
 $this->playerEnergy->initDb(array_keys($players), 3); // initial value = 3
 $this->roundCounter->initDb(1); // initial value = 1
 
-// In getAllDatas():
+// In getAllDatas() — fillResult writes into $result['players'][$pid], so build that first:
 public function getAllDatas(int $currentPlayerId): array {
     $result = [];
-    $this->playerEnergy->fillResult($result);
+    $result['players'] = $this->getCollectionFromDb("SELECT player_id AS id, player_score AS score FROM player");
+    $this->playerEnergy->fillResult($result, currentPlayerId: $currentPlayerId); // currentPlayerId needed for SELF visibility
     $this->roundCounter->fillResult($result);
     return $result;
 }
@@ -42,7 +43,8 @@ public function getAllDatas(int $currentPlayerId): array {
 - `set(int $playerId, int $value, ?NotificationMessage)` — set + notify
 - `inc(int $playerId, int $inc, ?NotificationMessage)` — increment + notify
 - `getAll(): array` — all player values `[playerId => value]`
-- `setAll(int $value, ?NotificationMessage)` — set for all players
+- `setAll(int $value, ?NotificationMessage)` — set for all players (`set`/`inc`/`setAll` return the new value)
+- `getMin()`, `getMax()`, `setVisibility(CounterVisibility)`, `isVisible()/isSelf()/isHidden()`, `setUseNo()`, `setStrict()`
 - `fillResult(array &$result, ?string $fieldName, ?int $currentPlayerId)` — populate getAllDatas
 
 ## API — TableCounter
@@ -85,5 +87,5 @@ When a notification message is provided, counters automatically include these ar
 - **Pass `null` as message** to skip frontend notification
 - **Zero increment** (`inc=0`) sends no notification
 - **`fillResult` field name** defaults to counter name; override with 2nd parameter
-- **Default `playerScore`** counter exists but must be queried explicitly in `getAllDatas()`: `SELECT player_score AS score`
-- **Visibility options** — `"self"` shows `-` for other players; `"private"` hides from all
+- **Default `playerScore` / `playerScoreAux`** are PlayerCounters too: `$this->playerScore->fillResult($result, 'score')` or `SELECT player_score AS score`
+- **Visibility** is the enum `CounterVisibility::VISIBLE` (default), `::SELF` (own value only — pass `$currentPlayerId` to `fillResult`), `::HIDDEN`; there is no `'private'`

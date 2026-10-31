@@ -1,7 +1,7 @@
 # Config Files — BGA Reference
 
-**Doc:** https://en.doc.boardgamearena.com/Game_options_and_preferences:_gameoptions.inc.php + https://en.doc.boardgamearena.com/Game_statistics:_stats.inc.php + https://en.doc.boardgamearena.com/Game_meta-information:_gameinfos.inc.php
-**When to use:** Setting up or modifying game options, preferences, statistics, or metadata.
+**Doc:** https://en.doc.boardgamearena.com/Options_and_preferences:_gameoptions.json,_gamepreferences.json + https://en.doc.boardgamearena.com/Game_statistics:_stats.json + https://en.doc.boardgamearena.com/Game_meta-information:_gameinfos.jsonc
+**When to use:** Setting up or modifying game options, preferences, statistics, or metadata. Each file may be `.json` (strict) or `.jsonc` (comments allowed) — recent scaffolds ship `.jsonc`; keep whichever extension the project has and list it in the Makefile.
 
 ## gameoptions.json
 
@@ -104,9 +104,10 @@ Cosmetic preferences (per player, not game-affecting).
 ```javascript
 // JS
 const pref = this.bga.userPreferences.get(100);
+this.bga.userPreferences.onChange = (prefId, value) => { /* react live, e.g. toggle a data- attribute */ };
 
 // PHP
-$pref = $this->userPreferences->get($playerId, 100);
+$pref = $this->bga->userPreferences->get($playerId, 100);   // ?int
 ```
 
 ## stats.json
@@ -167,9 +168,11 @@ $this->bga->playerStats->set('avg_score_per_turn', $avg, $pid);
 ```
 
 > ⚠ **`PlayerStats::init` has no `$playerId`.** Signature is
-> `init($name, $value, bool $updateTableStat = false)`. Passing a player ID
-> casts to `true`, which makes the framework also try to init a same-named
-> table stat — silent crash in `setupNewGame` if none exists.
+> `init(string|array $nameOrNames, $value, bool $updateTableStat = false)` — an
+> array inits several stats at once. A player ID lands in `$updateTableStat`
+> (TypeError under `strict_types`, silently `true` otherwise, which makes the
+> framework also init a same-named table stat) — crash in `setupNewGame`.
+> `inc(..., updateTableStat: true)` mirrors a player stat into a table stat.
 
 ## gameinfos.inc.php
 
@@ -224,8 +227,8 @@ Deploy then reload via BGA Studio manage page (or use the automated reload from 
 
 ## JSON Constraints
 
-All JSON config files:
-- **No comments** (use `"$comment": "..."` hack if needed)
+All `.json` config files:
+- **No comments** — rename the file `.jsonc` if you want `//` comments (all four config files accept it)
 - **No trailing commas**
 - **All keys must be strings**
 - **No PHP constants** — use raw numeric values

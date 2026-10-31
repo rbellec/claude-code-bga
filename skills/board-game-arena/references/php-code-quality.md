@@ -93,147 +93,30 @@ parameters:
     level: max
     paths:
         - modules/php
-        - gameinfos.inc.php
     excludePaths:
         - bga_initial_code_template
-    bootstrapFiles:
-        - stubs/bga-framework.stub.php
+    # The framework's own generated stub — every class, signature and @deprecated
+    # note. Scanned for symbols, not analysed. Re-download it when BGA updates it
+    # (SKILL 1.1): it is the API authority, hand-written stubs drift.
+    scanFiles:
+        - bga_initial_code_template/_ide_helper.php
     treatPhpDocTypesAsCertain: false
     reportUnmatchedIgnoredErrors: false
-    ignoreErrors:
-        - identifier: property.notFound
-          path: modules/php/*
-        - '#^Class .*Deck.*not found#'
 ```
 
 You'll generate `phpstan-baseline.neon` once on the first run (see Workflow below). Commit it.
 
-### `stubs/bga-framework.stub.php`
+### Framework symbols: use `_ide_helper.php`, not a hand-written stub
 
-The BGA framework is loaded server-side, so PHPStan can't resolve `\Bga\GameFramework\*` symbols by itself. A small stub file tells PHPStan what those classes look like. Start minimal — extend as you use new framework symbols.
+Earlier versions of this guide shipped a `stubs/bga-framework.stub.php` written by hand. An audit against the real `_ide_helper.php` (2026-10) found it wrong on most lines — `StateType` as a class of mis-cased constants instead of the enum, a phantom `gamestate()` method, `GameState::__construct()` without its parameters, invented getters, wrong namespaces for `Globals`/`TableStats`/`TableOptions`, `TableOptions::get(string)`. With that stub PHPStan approved code that fails on Studio and flagged code that works.
 
-```php
-<?php
+`_ide_helper.php` is a valid PHP file declaring the whole framework (namespaces `Bga\GameFramework\*`, the global legacy classes, `bga_rand`, `clienttranslate`…), so PHPStan can simply **scan** it. Benefits you get for free:
 
-declare(strict_types=1);
+- the real signatures: `PlayerStats::init($nameOrNames, $value, bool $updateTableStat = false)` (no player id — the classic crash is now a type error), `TableOptions::get(int): ?int`, untyped `setupNewGame($players, $options = [])`;
+- `@deprecated` notes on `initGameStateLabels`, `notifyAllPlayers`, `getGameLanguage()`, the legacy exception classes — PHPStan's deprecation rules fire on them;
+- new components (ItemManager, Collection, GameResult) without editing anything.
 
-namespace Bga\GameFramework {
-
-    /**
-     * @property-read \Bga\GameFramework\Components\Globals $globals
-     * @property-read \Bga\GameFramework\Components\TableStats $tableStats
-     * @property-read \Bga\GameFramework\Components\PlayerStats $playerStats
-     * @property-read \Bga\GameFramework\Components\TableOptions $tableOptions
-     */
-    class BgaContext {}
-
-    abstract class Table
-    {
-        /** @var BgaContext */
-        protected $bga;
-        public function __construct() {}
-        protected function initTable(): void {}
-        protected function setupNewGame(array $players, array $options = []): mixed { return null; }
-        public function getAllDatas(int $currentPlayerId): array { return []; }
-        public function getGameProgression(): int { return 0; }
-
-        protected function getActivePlayerId(): int { return 0; }
-        protected function getCurrentPlayerId(): int { return 0; }
-        protected function getGameinfos(): array { return []; }
-        protected function getPlayersBasicInfos(): array { return []; }
-        protected function getPlayersNumber(): int { return 0; }
-
-        /** @return array<string,mixed>|null */
-        protected function getObjectFromDB(string $sql): ?array { return null; }
-        /** @return array<int|string,array<string,mixed>|mixed> */
-        protected function getCollectionFromDb(string $sql): array { return []; }
-        /** @return list<array<string,mixed>> */
-        protected function getObjectListFromDB(string $sql): array { return []; }
-        protected function getUniqueValueFromDB(string $sql): mixed { return null; }
-        protected function DbQuery(string $sql): void {}
-
-        protected function notifyAllPlayers(string $type, string $message, array $args = []): void {}
-        protected function notifyPlayer(int $playerId, string $type, string $message, array $args = []): void {}
-        protected function giveExtraTime(int $playerId, ?int $specificTime = null): void {}
-
-        public function gamestate(): \Bga\GameFramework\GameStateController { return new \Bga\GameFramework\GameStateController(); }
-    }
-
-    class UserException extends \Exception {}
-
-    class StateType
-    {
-        public const GAME = 'game';
-        public const ACTIVE_PLAYER = 'activePlayer';
-        public const MULTIPLE_ACTIVE_PLAYER = 'multipleActivePlayer';
-        public const MANAGER = 'manager';
-    }
-
-    class GameStateController
-    {
-        public function nextState(string $transition): void {}
-        public function jumpToState(int $stateId): void {}
-        public function setActivePlayer(int $playerId): void {}
-        public function changeActivePlayer(int $playerId): void {}
-    }
-}
-
-namespace Bga\GameFramework\States {
-
-    abstract class GameState
-    {
-        public function __construct() {}
-        public function getId(): int { return 0; }
-        public function getName(): string { return ''; }
-        public function getType(): string { return ''; }
-        public function onEnteringState(array $args): mixed { return null; }
-        public function getArgs(): array { return []; }
-        public function getPossibleActions(): array { return []; }
-    }
-
-    #[\Attribute(\Attribute::TARGET_METHOD)]
-    class PossibleAction
-    {
-        public function __construct(public string $name = '') {}
-    }
-}
-
-namespace Bga\GameFramework\Components {
-
-    class Globals
-    {
-        public function set(string $key, mixed $value): void {}
-        public function get(string $key, mixed $default = null): mixed { return $default; }
-        public function inc(string $key, int $delta = 1): int { return 0; }
-        public function has(string $key): bool { return false; }
-    }
-
-    class TableStats
-    {
-        public function init(string $name, mixed $value): void {}
-        public function set(string $name, mixed $value): void {}
-        public function get(string $name): mixed { return null; }
-        public function inc(string $name, int $delta = 1): void {}
-    }
-
-    class PlayerStats
-    {
-        // init has NO $playerId — it inits all players in one call.
-        // Passing an int silently casts to true and crashes setupNewGame
-        // (see SKILL.md / config-files.md). Keep the stub faithful so
-        // PHPStan flags the mistake instead of approving it.
-        public function init(string $name, mixed $value, bool $updateTableStat = false): void {}
-        public function set(string $name, mixed $value, int $playerId): void {}
-        public function get(string $name, int $playerId): mixed { return null; }
-        public function inc(string $name, int $delta, int $playerId): void {}
-    }
-
-    class TableOptions
-    {
-        public function get(string $key): mixed { return null; }
-    }
-}
-```
+If you kept a `stubs/` directory from the old setup, delete it and remove it from `rector.php` / `phpmd.xml`. Game-specific hooks that the framework calls but does not declare on `GameState` (`getArgs`, `onEnteringState`, `zombie`, `act*`) need no stub — they are your own methods.
 
 ### `rector.php`
 
@@ -253,11 +136,10 @@ return RectorConfig::configure()
     ])
     ->withSkip([
         __DIR__ . '/bga_initial_code_template',
-        __DIR__ . '/stubs',
 
         // === BGA framework safety: MUST stay skipped ===
-        // The PHPStan stubs declare framework methods (Table::__construct, etc.)
-        // with empty bodies. Rector reads stubs as truth and concludes that
+        // _ide_helper.php declares framework methods (Table::__construct, etc.)
+        // with empty bodies. Rector reads them as truth and concludes that
         // calls like parent::__construct() delegate to a no-op, then deletes
         // them. In production, the real Bga\GameFramework\Table::__construct()
         // initializes $bga, $gamestate, deckFactory, etc. Removing the parent
@@ -292,7 +174,6 @@ return RectorConfig::configure()
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
     <exclude-pattern>*/bga_initial_code_template/*</exclude-pattern>
-    <exclude-pattern>*/stubs/*</exclude-pattern>
 
     <rule ref="rulesets/cleancode.xml">
         <exclude name="StaticAccess"/>
