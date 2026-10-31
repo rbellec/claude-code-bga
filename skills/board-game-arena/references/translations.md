@@ -37,7 +37,7 @@ become available once your game enters beta.
 
 ### Testing translations on Studio (`&dummyTranslations`)
 
-The old "Display dummy translation" block of the manage page was removed (Q3 2026). The replacement is a URL flag: on a Studio **table page**, append `&dummyTranslations` to the URL. Every front-side translated string (`_()` on the client, `clienttranslate()`d texts rendered by the client) displays wrapped in `«»` — anything shown in bare English is an i18n bug. It no longer exercises PHP-side `$this->_()` calls.
+The "Display dummy translation" block of the manage page was removed (Q3 2026 Studio newsletter: *"replaced by a simpler method… It no longer tests PHP-side translations"*). The replacement is a URL flag: on a Studio **table page**, append `&dummyTranslations` to the URL. Every front-side translated string (`_()` on the client) displays wrapped in `«»` — anything shown in bare English is an i18n bug.
 
 For the static view, run a **Dry run build** from the manage page: its "Scan translations" section lists all extracted keys exactly as translators will see them (spell-check them there). The former "Check project" button is obsolete.
 

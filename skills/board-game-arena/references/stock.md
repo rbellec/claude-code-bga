@@ -23,7 +23,7 @@ this.playerHand.addItemType(typeId, weight, this.bga.images.getImgUrl('cards.png
 ### Adding/Removing
 - `addToStock(type)` — add generic item (no unique ID)
 - `addToStockWithId(type, id, from?)` — add tracked item
-- `removeFromStock(type, to?, noupdate?)` — remove by type (`noupdate` not in the d.ts)
+- `removeFromStock(type, to?, noupdate?)` — remove by type (wiki-only method, not in the d.ts `Stock` class)
 - `removeFromStockById(id, to?)` — remove by ID
 - `removeAll()` — clear all
 - `removeAllTo(to)` — clear with animation to target

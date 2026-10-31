@@ -147,7 +147,7 @@ replay.
 3. Fill "Zombie Mode level" (Metadata tab); ensure ≥ 2 tags (Tags tab)
 4. `make deploy` → "Commit & build a new version now"
 5. "Request ALPHA status" → handle the warnings dialog → submit. The
-   Studio walkthrough page (Sept 2026) describes two buttons, **"Request
+   Studio walkthrough page (revised Sept 2026) describes two buttons, **"Request
    PRIVATE ALPHA status"** (admins check the game starts, you invite
    testers yourself) and **"Request PUBLIC ALPHA status"**; the Pre-release
    checklist still names a single "Request ALPHA status" — use whichever

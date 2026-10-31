@@ -57,7 +57,7 @@ Recovery sequence (verified):
 | `throw new BgaSystemException / BgaVisibleSystemException / feException` | `\Bga\GameFramework\SystemException` / `VisibleSystemException` (drop `FEX_NOCODE` constants) |
 | `$this->isAsync()` / `isRealtime()` | `$this->bga->tableOptions->isTurnBased()` / `isRealTime()` |
 | `getGameLanguage()` | `$this->bga->tableOptions->getGameLanguage()` |
-| `$this->getTableOptions()` | `$this->bga->tableOptions->get($id)` (metadata only: `getGameOptions()`) |
+| `$this->getTableOptions()` / option globals read with `getGameStateValue` | `$this->bga->tableOptions->get($id)` — `?int`, null on tables older than the option |
 | `$this->default_viewport = "width=740"` (JS) | `"game_interface_width": { "min": …, "autoscale": true }` in `gameinfos.jsonc` |
 | `getActivePlayerName()` / `getCurrentPlayerName()` / `getCurrentPlayerColor()` | `getPlayerNameById(...)` / `getPlayerColorById(...)` |
 | `$this->gamestate->state()` / `getState()` | `getCurrentMainState()` / `getCurrentMainStateId()` |

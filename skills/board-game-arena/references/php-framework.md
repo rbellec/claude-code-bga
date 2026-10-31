@@ -171,6 +171,8 @@ $this->getGameStateValue('key');
 ## Scoring & Ranking
 
 ```php
+use Bga\GameFramework\GameResult\GameResult;
+
 // Standard scoring (highest wins)
 $this->bga->playerScore->set($pid, $score);
 $this->bga->playerScoreAux->set($pid, $tiebreaker);
@@ -187,7 +189,6 @@ return GameResult::solo($playerId /* or null = the only player */, score: $score
 // Where: return the GameResult from the END-SCORE state (98, GAME type) instead of `return 99;`
 // — returning a GameResult from a state class ends the game. Plain `return 99` keeps the
 // default ranking by player_score / player_score_aux.
-use Bga\GameFramework\GameResult\GameResult;
 
 // Elimination (mid-game removal)
 $this->eliminatePlayer($pid);
@@ -278,6 +279,7 @@ public function getSpecificColorPairings(): array { ... }
 ```php
 use Bga\GameFramework\UserException;
 use Bga\GameFramework\VisibleSystemException;
+use Bga\GameFramework\NotificationMessage;
 
 // User error — rolls back DB, prevents notifications, shows error to player
 throw new UserException(clienttranslate('You cannot do that'));

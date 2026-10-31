@@ -39,7 +39,7 @@ sftp -i ~/.ssh/id_rsa_bga -P 2022 -o IdentitiesOnly=yes USER@1.studio.boardgamea
 
 **Never modify** `bga_initial_code_template/` — it's the framework reference.
 
-The scaffold ships two generated files that are the **authoritative API**: `_ide_helper.php` (every PHP class, method and docblock of the framework) and `bga-framework.d.ts` (the whole `this.bga.*` JS surface). BGA refreshes both on the server for every project, old or new — re-download them when in doubt. **When this skill and those files disagree, the files win**: grep them before concluding a method "doesn't exist".
+The scaffold ships two generated files that are the **authoritative API**: `_ide_helper.php` (every PHP class, method and docblock of the framework) and `bga-framework.d.ts` (the whole `this.bga.*` JS surface). BGA ships both in every project and updates them server-side (projects created in April 2026 carry October 2026 files) — re-download them when in doubt. **When this skill and those files disagree, the files win**: grep them before concluding a method "doesn't exist".
 
 **→ Commit now** (scaffold + .gitignore).
 
@@ -63,7 +63,7 @@ package.json, tsconfig.json, rollup.config.mjs, src-disabled/ts/  — optional T
 Makefile                          — check + deploy targets
 ```
 
-The scaffold ships an **optional TypeScript setup**: `src-disabled/ts/Game.ts` + `types.d.ts`, built by `npm run build:ts` (rollup) into `modules/js/Game.js`. Rename `src-disabled/` to `src/` and `npm i` to use it; delete the four TS files to stay in plain JS (this skill's examples are plain JS). Deploy only `modules/`, never `src/`.
+The scaffold ships an **optional TypeScript setup**: `src-disabled/ts/Game.ts` + `types.d.ts`, built by `npm run build:ts` (rollup) into `modules/js/Game.js`. Rename `src-disabled/` to `src/` and `npm i` to use it; delete the toolchain files (`package.json`, `tsconfig.json`, `rollup.config.mjs`, `src-disabled/`) to stay in plain JS (this skill's examples are plain JS). Deploy only `modules/`, never `src/`.
 
 ### 1.3 Makefile and git init
 
@@ -86,7 +86,7 @@ For users comfortable with PHP tooling, the skill can layer four quality tools o
 
 Together they form a `make audit` target — a local "PR review" loop, read-only, ~10 s. Tools install once into a shared `~/.bga-tools/` Composer toolbox (no per-project re-install). The audit is **not gated on deploy** — quality is advisory, never blocks a session push.
 
-**Skip this section if you're not comfortable with PHP tooling — the skill works fine without it.** If you want it, see `references/php-code-quality.md` for the full setup (toolbox install, four config files, stubs for the BGA framework, baseline workflow, and an opt-in pre-commit hook).
+**Skip this section if you're not comfortable with PHP tooling — the skill works fine without it.** If you want it, see `references/php-code-quality.md` for the full setup (toolbox install, four config files, PHPStan scanning the scaffold's `_ide_helper.php`, baseline workflow, and an opt-in pre-commit hook).
 
 ### 1.4 Rules analysis and author clarification
 
@@ -228,9 +228,11 @@ class PlayerTurn extends GameState
         return NextState::class; // return the next state class, not a string
     }
 
-    // zombie delegation works because the act method takes the player id as a param
+    // zombie delegation works because the act method takes the player id as a param;
+    // pass every magic param yourself ($args = getArgs(), as the scaffold does)
     public function zombie(int $playerId): string {
-        return $this->actDoSomething('default', $playerId);
+        $args = $this->getArgs();
+        return $this->actDoSomething($this->getRandomZombieChoice($args['playableIds']), $playerId, $args);
     }
 
     // Action parameter validation (autowired — no action.php needed)
@@ -247,7 +249,7 @@ class PlayerTurn extends GameState
 - Act methods return the **next state class** (e.g., `return ResolveAction::class`)
 - This applies to BOTH `ACTIVE_PLAYER` and `MULTIPLE_ACTIVE_PLAYER` states
 - For `MULTIPLE_ACTIVE_PLAYER`: the framework automatically waits for all players when the action returns a state class. `setPlayerNonMultiactive($id, NextState::class)` is also valid — a transition **name** string is not (`This transition (X) is impossible`)
-- **Ending the game:** state 99 is framework-owned. Compute scores in a GAME state 98 (`EndScore`) and `return 99` from its `onEnteringState` — or return a `GameResult` (`GameResult::coop(...)`, `::solo(...)`, see `references/php-framework.md`), which ends the game with a win/loss outcome
+- **Ending the game:** state 99 is framework-owned (never override `argGameEnd()` / `stGameEnd()`). Compute scores in a GAME state 98 (`EndScore`) and `return 99` from its `onEnteringState` — or return a `GameResult` (`GameResult::coop(...)`, `::solo(...)`, see `references/php-framework.md`), which ends the game with a win/loss outcome
 - A method that may return the int `99` must not be typed `: string` (strict_types TypeError); type act methods `: string` only when they always return a class name
 - State IDs 1 and 99 are reserved (gameSetup, gameEnd); `StateType` is `ACTIVE_PLAYER | MULTIPLE_ACTIVE_PLAYER | PRIVATE | GAME | MANAGER`
 
@@ -265,8 +267,7 @@ Never call `getCurrentPlayerId()` / `getActivePlayerId()` inside an act method: 
 #[PossibleAction]
 public function actChoose(string $choice, int $currentPlayerId): string {
     $this->game->recordChoice($currentPlayerId, $choice);
-    $this->gamestate->setPlayerNonMultiactive($currentPlayerId, Resolve::class);
-    return Resolve::class;   // framework waits for the other active players
+    return Resolve::class;   // this player becomes inactive; the framework waits for the others
 }
 
 public function zombie(int $playerId): string {
@@ -605,7 +606,7 @@ input.dispatchEvent(new Event('input', {bubbles: true}));
 document.getElementById('debugParamDlgApply').click();
 ```
 
-**Counters & globals popups:** the Studio debug menu also offers popups to edit `player_score`, `player_score_aux`, any `PlayerCounter`/`TableCounter`, and every `$this->bga->globals` value live — no `debug_*` helper needed for those.
+**Counters & globals popups** (Q3 2026 Studio newsletter): the Studio debug menu also offers popups to edit `player_score`, `player_score_aux`, any `PlayerCounter`/`TableCounter`, and every `$this->bga->globals` value live — no `debug_*` helper needed for those.
 
 **Full SQL/request logs** (best for stack traces):
 `/1/GAME_NAME/GAME_NAME/logaccess.html?table=N`
@@ -669,7 +670,7 @@ After first deploy, BGA Studio may show these warnings — they are non-blocking
 | Warning | Fix |
 |---------|-----|
 | "This game doesn't have a description" | Fill in the Game Metadata Manager on BGA Studio (UI, not code) |
-| "This game doesn't have a valid BGG_ID" | Set `'bgg_id' => 0` in `gameinfos.inc.php` until a BGG page exists. Then reload game informations. When ready to publish, see `references/bgg-submission.md`. |
+| "This game doesn't have a valid BGG_ID" | Set `"bgg_id": 0` in `gameinfos.jsonc` (`'bgg_id' => 0` in a legacy `.inc.php`) until a BGG page exists. Then reload game informations. When ready to publish, see `references/bgg-submission.md`. |
 
 ---
 

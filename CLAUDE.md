@@ -33,7 +33,7 @@ When publishing a release: bump `version` in `.claude-plugin/plugin.json` so ins
 
 ## Checking for framework API drift
 
-The authoritative API is not the wiki but two generated files BGA pushes to the root of **every** Studio project (old or new), refreshed server-side: `_ide_helper.php` (PHP) and `bga-framework.d.ts` (JS). The wiki lags behind them (e.g. it omitted `addActionButton` options the d.ts had typed for months).
+The authoritative API is not the wiki but two generated files BGA ships at the root of **every** Studio project and updates server-side (April projects carry October files): `_ide_helper.php` (PHP) and `bga-framework.d.ts` (JS). The wiki lags behind them (e.g. it omitted `addActionButton` options the d.ts had typed for months).
 
 To check whether the skill is stale:
 

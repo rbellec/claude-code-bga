@@ -27,7 +27,7 @@ class Card
     public string $location;              // 'deck', 'hand', … — first part: non-null string|int
 
     #[ItemField(kind: ItemFieldKind::LOCATION, locationIndex: 1)]
-    public int|string|null $locationArg;  // e.g. player id — extra parts MUST be nullable
+    public ?int $locationArg;             // e.g. player id — extra parts MUST be nullable (int|string|null if it may hold names)
 
     #[ItemField(kind: ItemFieldKind::ORDER)]
     public int $order;                    // zero-based position inside the exact location, kept dense
@@ -47,6 +47,7 @@ The three kinds `ID`, `LOCATION`, `ORDER` are mandatory; names are yours. `#[Ite
 ```php
 use Bga\GameFramework\Components\ItemManager\ItemLocation;
 use Bga\GameFramework\Components\ItemManager\ItemManager;
+use Bga\GameFramework\Components\ItemManager\Location;   // Location::from / Location::filter
 
 class Game extends \Bga\GameFramework\Table
 {

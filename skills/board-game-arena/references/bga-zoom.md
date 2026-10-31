@@ -25,7 +25,7 @@ this.zoomManager = new BgaZoom.Manager({
 
 ## Pitfalls
 
-- **Scaling uses CSS `zoom`** — legacy dojo animations (`slideToObject`…) break inside the zoomed element; BgaAnimations works. Use `this.bga.gameui.getBoundingClientRectIgnoreZoom(el)` for geometry
+- **Scaling uses CSS `zoom`** — legacy dojo animations (`slideToObject`…) break inside the zoomed element; BgaAnimations works. `getBoundingClientRect()` is unreliable inside a zoomed element; the framework's `getBoundingClientRectIgnoreZoom(el)` only compensates the framework autoscale, so see the lib's docs/demo for geometry inside a BgaZoom element
 - **Don't stack it on framework autoscale** — if you manage scaling with BgaZoom, set `"game_interface_width": { "autoscale": false }` in `gameinfos.jsonc` (the doc names BgaZoom as the legitimate reason to disable autoscale)
 - Handles light/dark theme since 1.0.1; semver — require `'1.x'`
 - TypeScript: d.ts at `https://x.boardgamearena.net/data/game-libs/bga-zoom/1.x/dist/bga-zoom.d.ts`

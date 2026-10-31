@@ -46,7 +46,7 @@
 - **No flashing/rapid visuals**
 - **Label all buttons** for screen readers
 
-## Dark Mode (live since July 2026)
+## Dark Mode (in production since July 2026 — Q2 2026 Studio newsletter)
 
 - BGA toggles dark mode per player (avatar menu before a game, hamburger menu during) and sets **`html[data-theme="dark"]`** — style on that attribute, **not** on `@media (prefers-color-scheme: dark)`, which would ignore the BGA toggle
 - Most games work out of the box; the classic break is a fixed light background without a text color → add `color: black` on those elements

@@ -202,7 +202,7 @@ The skill paid for ignoring this twice. In July 2026 a wiki-based pass *removed*
 
 ## Why act methods take the player id as a magic parameter
 
-`getCurrentPlayerId()` reads the HTTP session: it returns a **string** and throws ("Not logged") when there is no request behind the call — which is exactly the situation of `zombie()` (server-side, triggered by a timeout), `setupNewGame` and the args methods. The framework therefore autowires typed magic parameters on act methods: `int $activePlayerId` in `ACTIVE_PLAYER` states, `int $currentPlayerId` in `MULTIPLE_ACTIVE_PLAYER` / `PRIVATE` states (documented August 2026), plus the `*No` seat-number variants and `array $args` (the state's `getArgs()`).
+`getCurrentPlayerId()` reads the HTTP session: it returns a **string** and throws ("Not logged") when there is no request behind the call — which is exactly the situation of `zombie()` (server-side, triggered by a timeout), `setupNewGame` and the args methods. The framework therefore autowires typed magic parameters on act methods: `int $activePlayerId` in `ACTIVE_PLAYER` states, `int $currentPlayerId` in `MULTIPLE_ACTIVE_PLAYER` / `PRIVATE` states (on the wiki since August 2026), plus the `*No` seat-number variants and `array $args` (the state's `getArgs()`).
 
 Because the id is then an ordinary parameter, `zombie(int $playerId)` can delegate to the act method with a default move in both state types — no duplicated logic, no helper extraction. The earlier skill advice ("multiactive states must call `getCurrentPlayerId()`, so zombie cannot delegate") predates the `$currentPlayerId` documentation.
 

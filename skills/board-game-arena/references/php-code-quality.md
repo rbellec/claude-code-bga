@@ -252,7 +252,7 @@ git add phpstan-baseline.neon
 make audit
 ```
 
-The first PHPStan run will produce hundreds of errors (framework symbols typed as `mixed`, protected method access from State classes, missing classes like `Deck`). The baseline freezes them. From that point on, `make analyze` only reports **new** errors introduced after the baseline.
+The first PHPStan run will produce many errors (loose DB return types, game hooks the framework calls dynamically, string-typed ids). The baseline freezes them. From that point on, `make analyze` only reports **new** errors introduced after the baseline.
 
 ### Day-to-day
 

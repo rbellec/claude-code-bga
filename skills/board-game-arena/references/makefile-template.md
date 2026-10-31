@@ -13,7 +13,8 @@ BGA_REMOTE := $(BGA_GAME)
 BGA_KEY    := $(HOME)/.ssh/id_rsa_bga
 BGA_SCP    := scp -i $(BGA_KEY) -P $(BGA_PORT) -o IdentitiesOnly=yes
 
-DEPLOY_ROOT := gameinfos.inc.php dbmodel.sql stats.json gameoptions.json gamepreferences.json
+# Config files: keep the extension the scaffold shipped (.jsonc on recent scaffolds, .json/.inc.php on older ones)
+DEPLOY_ROOT := dbmodel.sql $(wildcard gameinfos.jsonc gameinfos.inc.php stats.json stats.jsonc gameoptions.json gameoptions.jsonc gamepreferences.json gamepreferences.jsonc)
 DEPLOY_PHP  := modules/php/Game.php modules/php/material.inc.php
 DEPLOY_JS   := modules/js/Game.js
 
