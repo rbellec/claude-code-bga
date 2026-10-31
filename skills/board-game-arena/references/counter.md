@@ -12,12 +12,10 @@ const counter = new ebg.counter();
 counter.create('my_counter_div');
 
 // With settings (modern framework):
-counter.create('my_counter_div', {
-    value: 0,
-    tableCounter: false,
-    playerCounter: false,
-    playerId: null,
-});
+counter.create('my_counter_div', { value: 0 });          // value: null disables the initial value
+// Linked to a PHP TableCounter / PlayerCounter (auto-updated by their notifications):
+counter.create('round_div',  { value: 1, tableCounter: 'round' });
+counter.create('energy_div', { value: 3, playerCounter: 'energy', playerId: 12345 }); // playerId: number
 ```
 
 ## API
@@ -31,7 +29,7 @@ counter.create('my_counter_div', {
 
 ### Configuration
 ```javascript
-counter.speed = 300; // animation duration in ms (default: 100)
+counter.speed = 300; // animation duration in ms (default: 100) — legacy property, not in bga-framework.d.ts
 ```
 
 ## Example
@@ -42,7 +40,7 @@ this.scoreCounters = {};
 for (const [pid, player] of Object.entries(gamedatas.players)) {
     this.scoreCounters[pid] = new ebg.counter();
     this.scoreCounters[pid].create(`score_${pid}`);
-    this.scoreCounters[pid].setValue(player.score);
+    this.scoreCounters[pid].setValue(parseInt(player.score, 10)); // gamedatas numbers are strings
 }
 
 // Update on notification:

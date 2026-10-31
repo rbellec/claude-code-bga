@@ -7,9 +7,9 @@
 ## Setup
 
 ```javascript
-const [zone] = await importDojoLibs(['ebg/zone']);
+const [Zone] = await importDojoLibs(['ebg/zone']);   // resolves to the constructor (legacy form: new Zone())
 
-this.myZone = new ebg.zone();
+this.myZone = new Zone();
 this.myZone.create(this.bga.gameui, 'zone_div_id', itemWidth, itemHeight);
 this.myZone.setPattern('grid'); // or 'diagonal', 'verticalfit', 'horizontalfit', 'ellipticalfit', 'custom'
 ```

@@ -7,9 +7,9 @@
 ## Setup
 
 ```javascript
-const [scrollmap] = await importDojoLibs(['ebg/scrollmap']);
+const [Scrollmap] = await importDojoLibs(['ebg/scrollmap']);   // resolves to the constructor (legacy form: new Scrollmap())
 
-this.scrollmap = new ebg.scrollmap();
+this.scrollmap = new Scrollmap();
 this.scrollmap.create(
     $('map_container'),
     $('map_scrollable'),

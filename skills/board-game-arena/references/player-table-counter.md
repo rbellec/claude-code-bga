@@ -65,7 +65,7 @@ for (const [playerId, player] of Object.entries(gamedatas.players)) {
     this.energyCounters[playerId].create(`energy-counter-${playerId}`, {
         value: player.energy,
         playerCounter: 'energy',
-        playerId: playerId,
+        playerId: parseInt(playerId, 10),   // Object.entries keys are strings; the setting is a number
     });
 }
 ```
@@ -78,7 +78,7 @@ When a notification message is provided, counters automatically include these ar
 - `oldValue` — previous value
 - `inc` — change amount
 - `absInc` — absolute change
-- `playerId`, `player_name` — (PlayerCounter only)
+- `playerId` — (PlayerCounter only; typed args: `name`, `value`, `oldValue`, `inc`, `absInc`, `playerId`)
 
 ## Pitfalls
 

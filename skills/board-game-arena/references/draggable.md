@@ -7,9 +7,9 @@
 ## Setup
 
 ```javascript
-const [draggable] = await importDojoLibs(['ebg/draggable']);
+const [Draggable] = await importDojoLibs(['ebg/draggable']);   // resolves to the constructor (legacy form: new Draggable())
 
-const drag = new ebg.draggable();
+const drag = new Draggable();
 drag.create(this.bga.gameui, 'draggable_element_id', 'draggable_element_id');
 ```
 

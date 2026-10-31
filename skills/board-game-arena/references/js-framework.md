@@ -9,9 +9,12 @@
 ```javascript
 constructor(bga)                       // receives the `bga` facade: this.bga = bga; globals, register state classes
 setup(gamedatas)                       // build UI, connect events, setup notifications
-onEnteringState(stateName, args)       // state-specific UI (NOT called after setup)
+onEnteringState(stateName, args)       // switch-style alternative to JS state classes; state args at args.args (may be null);
+                                       // also called for the current state after setup() on load / F5
 onLeavingState(stateName)              // cleanup
-onUpdateActionButtons(stateName, args) // action buttons (REQUIRED for multiactive)
+onUpdateActionButtons(stateName, args) // args IS the getArgs() result (null for GAME states); called before onEnteringState;
+                                       // in multiactive states called on every activation change (REQUIRED there)
+onScreenWidthChange()                  // resize hook, also fired at load — pair with getBoundingClientRectIgnoreZoom(el) under autoscale
 ```
 
 ## State Management
@@ -55,6 +58,10 @@ this.bga.players.getPlayerById(pid)           // player data object (also getCur
 this.bga.players.getActivePlayerId()          // single active player
 this.bga.players.getActivePlayerIds()         // array (multiactive)
 this.bga.players.getPlayerAvatarUrl(pid, 50)  // sizes: 32, 50, 92, 184
+this.bga.players.isPlayerActive(pid)
+
+// gamedatas.players[pid] typed fields: id (string), name, color, score (string), is_ai (string),
+// beginner (boolean), eliminated, zombie (numbers); gamedatas.playerorder: number[]; gamedatas.gamestate.args
 
 // Player "no" (seat number, 1-based turn order) ↔ id — pairs with the PHP useNo APIs
 this.bga.players.getCurrentPlayerNo()         // null for spectators
@@ -86,26 +93,28 @@ dojo.destroy('element_id');               // remove element
 // Positioning
 this.bga.gameui.placeOnObject('mobile', 'target');          // instant
 this.bga.gameui.placeOnObjectPos('mobile', 'target', x, y); // with offset
-this.bga.gameui.attachToNewParent('mobile', 'newParent');    // reparent (clones!)
+const el = this.bga.gameui.attachToNewParent('mobile', 'newParent'); // reparent — returns the NEW node, old ref invalid
 
 // Templates
 this.bga.gameui.format_string(_('${player_name} plays ${card}'), args);
+// Hook to rewrite every log line before display (icons for ${card} etc.) — must return { log, args }
+bgaFormatText(log, args) { /* edit log/args */ return { log, args }; }
 ```
 
-## Animations
+## Animations (legacy dojo — prefer BgaAnimations for new code)
 
 ```javascript
-// Slide (returns animation — must call .play())
-this.bga.gameui.slideToObject('mobile', 'target', duration, delay).play();
-this.bga.gameui.slideToObjectPos('mobile', 'target', x, y, duration, delay).play();
-
-// Auto-playing (return .promise for await)
-this.bga.gameui.slideTemporaryObject(html, parent, from, to, duration).promise;
-this.bga.gameui.slideToObjectAndDestroy('mobile', 'target', duration).promise;
-this.bga.gameui.fadeOutAndDestroy('element', duration).promise;
+// All of these return a DojoAnimation ({ play() }). Await it with bgaPlayDojoAnimation —
+// there is no `.promise` property.
+const anim = this.bga.gameui.slideToObject('mobile', 'target', duration, delay);
+await this.bga.gameui.bgaPlayDojoAnimation(anim);        // plays it and resolves at the end
+this.bga.gameui.slideToObjectPos('mobile', 'target', x, y, duration, delay);
+this.bga.gameui.slideTemporaryObject(html, parent, from, to, duration, delay);
+this.bga.gameui.slideToObjectAndDestroy('mobile', 'target', duration, delay);
+this.bga.gameui.fadeOutAndDestroy('element', duration, delay);
 
 // Rotation
-this.bga.gameui.rotateTo('element', degrees).promise;    // animated
+this.bga.gameui.rotateTo('element', degrees);            // starts instantly, additive
 this.bga.gameui.rotateInstantTo('element', degrees);     // instant
 
 // Wait (respects animation settings)
@@ -119,7 +128,7 @@ if (this.bga.gameui.bgaAnimationsActive()) { /* animate */ }
 
 ```javascript
 // In onUpdateActionButtons:
-this.bga.statusBar.addActionButton(
+const btn = this.bga.statusBar.addActionButton(      // returns the HTMLButtonElement
     _('Play'),                                           // label
     () => this.bga.actions.performAction('actPlay'),     // callback (function, not string)
     {
@@ -136,16 +145,19 @@ this.bga.statusBar.addActionButton(
 );  // returns the HTMLButtonElement
 // (The options above are those typed in bga-framework.d.ts — the wiki page lags behind it.)
 
-// Status bar title
+// Status bar title / reset
 this.bga.statusBar.setTitle(_('${you} must choose a card'), {});
+this.bga.statusBar.removeActionButtons();
 ```
 
 ## Server Actions
 
 ```javascript
 // ONLY call from user events (onclick, onchange) — NEVER from notifications/loops/callbacks
+// Returns the ajax Promise, or UNDEFINED when checkAction/checkPossibleActions blocked the call
+// (so `await` is safer than chaining .then on it). Rejection value: { message, args }.
 this.bga.actions.performAction('actPlayCard', { id: cardId })
-    .then(() => { /* success */ })
+    ?.then(() => { /* success */ })
     .catch(() => { /* error */ });
 
 // Options
@@ -166,10 +178,10 @@ this.bga.actions.performAction('actPlay', args, {
 ## Tooltips
 
 ```javascript
-this.bga.gameui.addTooltip('element_id', _('Help text'), _('Action text'));
-this.bga.gameui.addTooltipHtml('element_id', '<div>Rich HTML</div>');
-this.bga.gameui.addTooltipToClass('card', _('A card'), '');
-this.bga.gameui.addTooltipHtmlToClass('card', htmlContent);
+this.bga.gameui.addTooltip('element_id', _('Help text'), _('Action text'), delay = 400); // '' for an unused part
+this.bga.gameui.addTooltipHtml('element_id', '<div>Rich HTML</div>', delay = 400);
+this.bga.gameui.addTooltipToClass('card', _('A card'), '', delay = 400);
+this.bga.gameui.addTooltipHtmlToClass('card', htmlContent, delay = 400);
 this.bga.gameui.removeTooltip('element_id');
 // All tooltip targets MUST have unique IDs
 ```
@@ -253,9 +265,9 @@ this.bga.images.preloadImages(['expansion/cards.png']); // load non-root
 const url = this.bga.images.getImgUrl('board.jpg');     // get URL
 // g_gamethemeurl + 'img/file.svg' still works but is @deprecated in favor of getImgUrl()
 
-// Sounds (no file extension — BGA serves .ogg or .mp3)
-this.bga.sounds.play('click');
-this.bga.sounds.dontPreloadSounds(['rare_sound']);
+// Sounds: drop name.ogg / name.mp3 in the game's `sounds/` folder (autoloaded), then
+this.bga.sounds.play('click');                          // name without extension
+this.bga.sounds.dontPreloadSounds(['rare_sound']); this.bga.sounds.preloadSounds(['rare_sound']);
 this.bga.gameui.disableNextMoveSound(); // suppress default move sound
 ```
 
@@ -263,6 +275,9 @@ this.bga.gameui.disableNextMoveSound(); // suppress default move sound
 
 ```javascript
 const pref = this.bga.userPreferences.get(100); // preference ID from gamepreferences.json
+this.bga.userPreferences.set(100, 2);
+this.bga.userPreferences.toggleVisibility(100, false); // hide a pref from the menu (e.g. irrelevant with this option)
+this.bga.userPreferences.onChange = (prefId, value) => { /* react live */ };
 ```
 
 ## Table Options (client side)
@@ -306,22 +321,24 @@ getLibUrl('bga-cards', '1.x');            // URL only
 ## Event Handling
 
 ```javascript
-// Connect events
-dojo.connect($('element'), 'onclick', this, 'onMethodName');
-this.bga.gameui.connect($('element'), 'onclick', 'onMethodName');
-this.bga.gameui.connect($('element'), 'onclick', (e) => { /* inline */ });
-this.bga.gameui.connectClass('css-class', 'onclick', 'onMethodName');
+// Plain DOM — what the scaffold and real projects use
+document.getElementById('board').addEventListener('click', (e) => this.onBoardClick(e));
+document.querySelectorAll('.mygame_piece').forEach(el => el.addEventListener('click', (e) => this.onPieceClick(e)));
+// Delegation keeps one listener alive across re-renders:
+board.addEventListener('click', (e) => { const cell = e.target.closest('[data-cell]'); if (cell) this.onCellClick(cell); });
 
-// Disconnect
-this.bga.gameui.disconnect($('element'), 'onclick');
-this.bga.gameui.disconnectAll();
+// Typed dojo form (3 args) — for legacy components that expose dojo events
+const handle = dojo.connect($('element'), 'onclick', (e) => this.onMethodName(e));
+dojo.disconnect(handle);
+// The old gamegui helpers (this.connect / connectClass / disconnect) are NOT part of the typed
+// this.bga.gameui surface — don't introduce them in new code.
 ```
 
 ## Pitfalls
 
 - **`performAction` only from user events** — NEVER from loops, callbacks, notifications, or state methods
-- **`attachToNewParent` clones** — destroys original element and dojo.connect handlers
-- **`slideToObject` needs `.play()`** — `slideTemporaryObject` auto-plays
+- **`attachToNewParent` returns a new node** — the old reference and its listeners are invalid afterwards
+- **No `.promise` on dojo animations** — `await this.bga.gameui.bgaPlayDojoAnimation(anim)`
 - **Slide methods incompatible with CSS transforms** (scale, zoom, rotate)
 - **Notification args are strings** — always `parseInt(value, 10)` before arithmetic
 - **Hotseat shares `gamedatas`** — no per-player client data
@@ -329,6 +346,6 @@ this.bga.gameui.disconnectAll();
 - **`#overall-content` gets state CSS class** — `.gamestate_playerTurn` for conditional CSS
 - **Tooltips need unique IDs** on all target elements
 - **Avoid custom zoom** — provide +/- if essential, but default view must be fully playable
-- **Deprecated: dojo.query, dojo.style** — use vanilla JS (document.querySelector, classList, etc.)
+- **Prefer vanilla DOM over `dojo.query` / `dojo.style`** (`querySelector`, `classList`, `style`) — the typed `dojo` surface is small and legacy
 - **Trust `bga-framework.d.ts` over the wiki** — the scaffold's declaration file is generated from the framework; when the wiki omits an option the d.ts lists (e.g. `addActionButton` `tooltip`/`confirm`/`autoclick`), the d.ts is right
 - **Tutorial mode detection** — `typeof g_tutorialwritten !== 'undefined'` (object when a tutorial is being played)

@@ -7,24 +7,24 @@
 ## Setup
 
 ```javascript
-const [stock] = await importDojoLibs(['ebg/stock']);
+const [Stock] = await importDojoLibs(['ebg/stock']);   // resolves to the constructors (d.ts example)
 
-this.playerHand = new ebg.stock();
+this.playerHand = new Stock();                          // wiki legacy form: new ebg.stock()
 this.playerHand.create(this.bga.gameui, $('myhand'), cardWidth, cardHeight);
 this.playerHand.image_items_per_row = 13; // columns in sprite sheet
 this.playerHand.setSelectionMode(1);      // 0=none, 1=single, 2=multiple
 
 // Register item types (one per card type)
-this.playerHand.addItemType(typeId, weight, g_gamethemeurl + 'img/cards.png', spritePosition);
+this.playerHand.addItemType(typeId, weight, this.bga.images.getImgUrl('cards.png'), spritePosition);
 ```
 
 ## API
 
 ### Adding/Removing
-- `addToStock(type, from?)` — add generic item (no unique ID)
+- `addToStock(type)` — add generic item (no unique ID)
 - `addToStockWithId(type, id, from?)` — add tracked item
-- `removeFromStock(type, to?, noupdate?)` — remove by type
-- `removeFromStockById(id, to?, noupdate?)` — remove by ID
+- `removeFromStock(type, to?, noupdate?)` — remove by type (`noupdate` not in the d.ts)
+- `removeFromStockById(id, to?)` — remove by ID
 - `removeAll()` — clear all
 - `removeAllTo(to)` — clear with animation to target
 
@@ -51,19 +51,19 @@ this.playerHand.addItemType(typeId, weight, g_gamethemeurl + 'img/cards.png', sp
 ## Events
 
 ```javascript
-dojo.connect(this.playerHand, 'onChangeSelection', this, 'onHandSelection');
+dojo.connect(this.playerHand, 'onChangeSelection', this, 'onHandSelection'); // legacy 4-arg object form
 
 onHandSelection(controlName, itemId) {
     const items = this.playerHand.getSelectedItems();
     if (items.length > 0) {
-        bga.actions.performAction('actPlayCard', { id: items[0].id });
+        this.bga.actions.performAction('actPlayCard', { id: items[0].id });
         this.playerHand.unselectAll();
     }
 }
 
 // Custom element setup
 this.playerHand.onItemCreate = dojo.hitch(this, 'setupCard');
-setupCard(cardDiv, typeId, cardId) {
+setupCard(itemDiv, typeId, itemDivId) {   // 3rd param = the item's DOM id, not the card id
     // add tooltips, custom HTML, etc.
 }
 ```

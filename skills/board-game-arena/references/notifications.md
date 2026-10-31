@@ -111,16 +111,19 @@ $this->bga->notify->all('simplePause', '', ['time' => 1000]);
 ```javascript
 // In setup():
 this.bga.notifications.setupPromiseNotifications({
-    // prefix: 'notif_',        // default
-    // minDuration: 500,         // ms (default: 500 with text, 1 without)
-    // logger: console.log,      // debug
-    // ignoreNotifications: [],  // skip these types
+    // prefix: 'notif_',         // default
+    // minDuration: 500,          // ms, notifications with a log text (only when animations are active)
+    // minDurationNoText: 1,      // ms, notifications without text
+    // handlers: [],              // extra objects whose notif_* methods are registered too
+    // logger: console.log,       // debug
+    // ignoreNotifications: [],   // skip these types
+    // onStart: (notifName, msg, args) => {}, onEnd: (notifName, msg, args) => {},
 });
 
 // Handler methods — auto-detected by prefix
 async notif_cardPlayed(args) {
     // args = the PHP notification args
-    await this.animateCard(args.card);
+    await this.animateCard(args.card);   // must resolve instantly when !bgaAnimationsActive() (replay, archive)
     // minDuration is enforced automatically after completion
 }
 
@@ -136,6 +139,7 @@ notif_scoreUpdate(args) {
 // In setupNotifications():
 dojo.subscribe('cardPlayed', this, 'notif_cardPlayed');
 this.bga.gameui.notifqueue.setSynchronous('cardPlayed', 500); // wait 500ms between notifs
+// (`notifqueue` is the legacy runtime property — not part of the typed this.bga.gameui surface)
 ```
 
 ### Ignore Notifications
@@ -145,7 +149,8 @@ this.bga.gameui.notifqueue.setSynchronous('cardPlayed', 500); // wait 500ms betw
 this.bga.gameui.notifqueue.setIgnoreNotificationCheck('dealCard',
     (notif) => notif.args.player_id === this.bga.players.getCurrentPlayerId()
 );
-// NOTE: client-side only — not for hiding private data (use _private in PHP)
+// NOTE: client-side only — not for hiding private data (use _private in PHP);
+// cannot be used on synchronous notifications without a duration
 ```
 
 ### Dynamic Synchronous Duration
@@ -168,9 +173,8 @@ notif_complexAnimation(notif) {
     args: { ... },             // PHP args
     bIsTableMsg: true,         // from notify->all()
     move_id: 42,               // associated move
-    table_id: '12345',         // game table (string)
     time: 1700000000,          // UNIX timestamp
-    uid: 'unique-id',
+    uid: 123456,               // number
 }
 ```
 

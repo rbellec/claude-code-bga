@@ -7,9 +7,9 @@
 ## Setup
 
 ```javascript
-const [expandablesection] = await importDojoLibs(['ebg/expandablesection']);
+const [ExpandableSection] = await importDojoLibs(['ebg/expandablesection']);   // resolves to the constructor (legacy form: new ExpandableSection())
 
-this.helpSection = new ebg.expandablesection();
+this.helpSection = new ExpandableSection();
 this.helpSection.create(this.bga.gameui, 'my_expandable');
 ```
 

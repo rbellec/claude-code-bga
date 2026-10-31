@@ -299,64 +299,68 @@ When you need a game component, check this table FIRST. Each library has a detai
 
 ### 2.6 Game.js structure
 
+The scaffold's pattern (used by every real project): **one JS class per PHP state**, registered in the constructor; the `Game` class keeps `setup()` and the notification handlers.
+
 ```javascript
-// modules/js/Game.js — ES6, no framework dependencies
-export class Game {  // MUST be named exactly "Game"
+// modules/js/Game.js — ES6 module, no framework dependencies
+
+class PlayerTurn {                      // one class per PHP state, same name as the PHP class
+    constructor(game, bga) { this.game = game; this.bga = bga; }
+
+    onEnteringState(args, isCurrentPlayerActive) {   // args = PHP getArgs() (this.args is filled too)
+        this.bga.statusBar.setTitle(isCurrentPlayerActive
+            ? _('${you} must place a piece') : _('${actplayer} must place a piece'));
+        if (isCurrentPlayerActive) {
+            this.game.highlightPlayable(args.playableIds);
+            this.bga.statusBar.addActionButton(_('Pass'),
+                () => this.bga.actions.performAction('actPass'), { color: 'secondary' });
+        }
+    }
+    onLeavingState(args, isCurrentPlayerActive) { this.game.clearHighlights(); }
+    // MULTIPLE_ACTIVE_PLAYER states: active players are not active yet in onEnteringState —
+    // put active-dependent UI in onPlayerActivationChange and call it yourself at the end of onEnteringState
+    onPlayerActivationChange(args, isCurrentPlayerActive) { }
+}
+
+export class Game {                     // MUST be named exactly "Game"
     constructor(bga) {
-        this.bga = bga;  // the framework passes the `bga` facade here — keep it
-        // Optional (scaffold default): one JS class per PHP state, registered with
-        // this.bga.states.register('PlayerTurn', new PlayerTurn(this, bga)) —
-        // see references/js-framework.md "State Management"
+        this.bga = bga;                 // the framework passes the `bga` facade here — keep it
+        this.bga.states.register('PlayerTurn', new PlayerTurn(this, bga));
+        // this.bga.states.logger = console.log;   // debug only — remove before production
     }
 
     setup(gamedatas) {
-        // 1. Build board/pieces from gamedatas
-        for (const [pid, player] of Object.entries(gamedatas.players)) {
-            // render player areas
+        this.gamedatas = gamedatas;
+        // 1. Build the WHOLE board/pieces from gamedatas (runs on load and on every F5)
+        this.bga.gameArea.getElement().insertAdjacentHTML('beforeend', '<div id="board"></div>');
+        for (const player of Object.values(gamedatas.players)) {
+            this.bga.playerPanels.getElement(player.id).insertAdjacentHTML('beforeend', `<span id="energy-${player.id}"></span>`);
         }
-
-        // 2. Connect click handlers
-        this.bga.gameui.connectClass('my-piece', 'onclick', 'onPieceClick');
-
-        // 3. Setup notification handlers (auto-detects notif_* methods)
+        // 2. Click handlers — plain DOM events, one funnel per action (see references/tutorial-ready.md)
+        document.getElementById('board').addEventListener('click', (e) => this.onBoardClick(e));
+        // 3. Notification handlers (auto-detects notif_* methods)
         this.bga.notifications.setupPromiseNotifications();
-
-        // 4. Render initial state (onEnteringState is NOT called after setup)
-        const stateArgs = gamedatas.gamestate?.args;
-        // Use stateArgs to render the complete initial UI
+        // The current state's onEnteringState also fires after setup() on load/refresh —
+        // keep state hooks idempotent, never rely on them to build the board.
     }
 
-    onEnteringState(stateName, args) {
-        // show/hide UI per state (called on state transitions, NOT after setup)
-    }
-
-    onLeavingState(stateName) { }
-
-    onUpdateActionButtons(stateName, args) {
-        // Add action buttons — REQUIRED for multiactive states
-        if (stateName === 'playerTurn') {
-            this.bga.statusBar.addActionButton(_('Pass'), () => {
-                this.bga.actions.performAction('actPass');
-            }, { color: 'secondary' });
-        }
-    }
-
-    // Notification handlers — auto-registered by setupPromiseNotifications()
-    // Name = 'notif_' + the notification type from PHP notify->all('somethingDone', ...)
+    // Notification handlers — name = 'notif_' + the type given to PHP notify->all('somethingDone', …)
     async notif_somethingDone(args) {
-        // args = PHP notification args; values are STRINGS — parseInt() before arithmetic
-        await this.bga.gameui.slideToObject('token', 'target').play().promise;
+        // args = PHP notification args; numeric values may arrive as STRINGS — parseInt() before arithmetic
+        document.getElementById(`cell-${args.cell}`).dataset.owner = args.player_id;
+        await this.bga.gameui.wait(300);   // resolves instantly when animations are off (replay)
     }
 
     // Action handler — ONLY from user events, NEVER from notifications/loops/callbacks
-    onPieceClick(e) {
-        const id = e.currentTarget.id;
-        this.bga.actions.performAction('actSelectPiece', { id: parseInt(id, 10) });
+    onBoardClick(e) {
+        const cell = e.target.closest('[data-cell]');
+        if (!cell) return;
+        this.bga.actions.performAction('actPlace', { cell: parseInt(cell.dataset.cell, 10) });
     }
 }
 ```
 
-Assets: `this.bga.images.getImgUrl('file.svg')` (the `g_gamethemeurl + 'img/…'` global is deprecated)
+Assets: `this.bga.images.getImgUrl('file.svg')` (the `g_gamethemeurl + 'img/…'` global is deprecated). Animations: use the BgaAnimations library (`references/bga-animations.md`); the legacy `slideToObject()` family returns a dojo animation to run with `await this.bga.gameui.bgaPlayDojoAnimation(anim)`.
 
 ### 2.7 Config file templates
 
@@ -729,18 +733,18 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 
 ### JavaScript / Client
 
-- **`setup()` runs before `onEnteringState()`** — render complete initial state in setup using `gamedatas.gamestate.args`
-- **Call `setupPromiseNotifications()`** in `setup()` — auto-detects all `notif_*` methods
-- **In MULTIPLE_ACTIVE_PLAYER states**: active players are NOT active yet in `onEnteringState` — use `onUpdateActionButtons` for active-dependent UI
-- **`performAction` only from user events** — NEVER from notifications, loops, callbacks, or state methods. Beyond double-submits, this is what makes the game *tutorial-able*: a tutorial is an annotated replay whose every action must be re-triggerable by hand (see `references/tutorial-ready.md`)
-- **`slideToObject()` returns dojo animation** — must call `.play()` on the result
+- **Build the whole UI in `setup()` from `gamedatas`** — it runs on load and on every F5. The current state's `onEnteringState` fires right after it, so state hooks must be idempotent and must not be the only place something is drawn
+- **Call `setupPromiseNotifications()`** in `setup()` — auto-detects all `notif_*` methods; an `async` handler must resolve instantly when `bgaAnimationsActive()` is false (replay / archive)
+- **In MULTIPLE_ACTIVE_PLAYER states**: active players are NOT active yet in `onEnteringState` — put active-dependent UI in `onPlayerActivationChange` (state classes) / `onUpdateActionButtons` (switch style)
+- **`performAction` only from user events** — NEVER from notifications, loops, callbacks, or state methods. Beyond double-submits, this is what makes the game *tutorial-able*: a tutorial is an annotated replay whose every action must be re-triggerable by hand (see `references/tutorial-ready.md`). It returns `undefined` (not a Promise) when `checkAction` blocks the call
+- **Legacy dojo animations** (`slideToObject` & co.) return an animation object: `await this.bga.gameui.bgaPlayDojoAnimation(anim)` — there is no `.promise`. Prefer BgaAnimations
 - **Slide methods incompatible with CSS transforms** (scale, zoom, rotate)
 - **Check `bgaAnimationsActive()`** before animating
-- **`parseInt(value, 10)`** — notification args are strings, `+=` will concatenate instead of add
+- **`parseInt(value, 10)`** — notification args and `gamedatas` numbers (`player.id`, `player.score`) can be strings, `+=` would concatenate
 - **Hotseat shares `gamedatas`** across players — no per-player client data
-- **Read-only detection**: check `isCurrentPlayerSpectator() || typeof g_replayFrom != 'undefined' || g_archive_mode`
+- **Read-only detection**: `isCurrentPlayerSpectator() || typeof g_replayFrom != 'undefined' || g_archive_mode`; tutorial mode: `typeof g_tutorialwritten != 'undefined'`
 - **Prefix CSS classes** with game name — e.g., `mygame_selected`, not `selected`
-- **`attachToNewParent` clones** the element — destroys original references and dojo.connect handlers
+- **`attachToNewParent` returns a NEW element** — the old reference (and its listeners) is invalid afterwards; use the return value
 - **Never call setState in notifications** — causes race conditions and breaks replays
 
 ### Zombie handling
@@ -756,6 +760,6 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 ### Debug tips
 
 - **Express stop** on the table config page kills a stuck game (overrides confirm with `window.confirm = () => true`)
-- **Temporary debug actions** (`#[PossibleAction]`) are effective for testing end-game / specific positions — call via `gameui.ajaxcall`, remove before commit
+- **Temporary debug actions** (`#[PossibleAction]`) are effective for testing end-game / specific positions — call from the console with `gameui.bga.actions.performAction('actDebugX', {...}, { checkAction: false })` (`ajaxcall` is deprecated for game actions); remove before commit
 - **Full SQL/request logs**: `/1/GAME_NAME/GAME_NAME/logaccess.html?table=N`
 - **CSS state class**: `#overall-content` gets `.gamestate_playerTurn` etc. — use for conditional visibility without JS
