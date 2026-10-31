@@ -39,6 +39,8 @@ sftp -i ~/.ssh/id_rsa_bga -P 2022 -o IdentitiesOnly=yes USER@1.studio.boardgamea
 
 **Never modify** `bga_initial_code_template/` — it's the framework reference.
 
+The scaffold ships two generated files that are the **authoritative API**: `_ide_helper.php` (every PHP class, method and docblock of the framework) and `bga-framework.d.ts` (the whole `this.bga.*` JS surface). BGA refreshes both on the server for every project, old or new — re-download them when in doubt. **When this skill and those files disagree, the files win**: grep them before concluding a method "doesn't exist".
+
 **→ Commit now** (scaffold + .gitignore).
 
 ### 1.2 Local directory structure
@@ -124,7 +126,9 @@ class Game extends Table
         // initGameStateLabels is legacy and int-only — avoid it
     }
 
-    public function setupNewGame(array $players, array $options = []): mixed {
+    protected function setupNewGame($players, $options = []): mixed {
+        // Keep the params UNTYPED — the parent declares them untyped, adding
+        // `array` would be an incompatible override. `$options` = table options.
         // 1. Set player colors
         $colors = $this->getGameinfos()['player_colors'];
         foreach ($players as $pid => $player) {
@@ -139,6 +143,8 @@ class Game extends Table
     }
 
     public function getAllDatas(int $currentPlayerId): array {
+        // `public` — the scaffold ships it `protected`, which fails at runtime
+        // ("Access level must be public"). Only return what $currentPlayerId may see.
         return [
             // data visible to all players
         ];
@@ -296,8 +302,11 @@ When you need a game component, check this table FIRST. Each library has a detai
 ```javascript
 // modules/js/Game.js — ES6, no framework dependencies
 export class Game {  // MUST be named exactly "Game"
-    constructor() {
-        // called once when the game loads
+    constructor(bga) {
+        this.bga = bga;  // the framework passes the `bga` facade here — keep it
+        // Optional (scaffold default): one JS class per PHP state, registered with
+        // this.bga.states.register('PlayerTurn', new PlayerTurn(this, bga)) —
+        // see references/js-framework.md "State Management"
     }
 
     setup(gamedatas) {
@@ -347,7 +356,7 @@ export class Game {  // MUST be named exactly "Game"
 }
 ```
 
-Assets: reference as `g_gamethemeurl + 'img/file.svg'` or `this.bga.images.getImgUrl('file.svg')`
+Assets: `this.bga.images.getImgUrl('file.svg')` (the `g_gamethemeurl + 'img/…'` global is deprecated)
 
 ### 2.7 Config file templates
 
@@ -641,7 +650,7 @@ Array.from(document.querySelectorAll('a')).find(a => a.href.match(/lobby\?game=\
 |-------|-----|
 | `reflexion_time cannot be initialized` | Move `initGameStateLabels` from constructor to `initTable()` |
 | `Constant X already defined` | Migrate to `public const` on the `Game` class (see 2.1). For legacy code that must keep `define()`, guard each one: `defined('X') \|\| define('X', …)` |
-| `Access level must be public` | `getAllDatas`, `getGameProgression` must be `public` |
+| `Access level must be public` | `getAllDatas`, `getGameProgression` must be `public` (the scaffold ships `getAllDatas` as `protected` — widen it) |
 | `Invalid id for state class` | Delete scaffold state files from server via SFTP |
 | `Unknown statistic id` | Reload statistics via BGA Studio manage panel |
 | `This transition (X) is impossible` | Return state class from act method instead of calling `setPlayerNonMultiactive(id, 'name')` |
@@ -739,10 +748,10 @@ CREATE TABLE IF NOT EXISTS `mygame_moves` (
 - Implement `public function zombie(int $playerId): string` on each `ACTIVE_PLAYER` / `MULTIPLE_ACTIVE_PLAYER` state class — the framework calls it for expelled/disconnected players
 - Return the next state class, exactly like an act method. Simplest robust pattern: call one of the state's own act methods with a valid default move, passing the player id (e.g., `return $this->actChooseCard($defaultId, $playerId);`)
 - The act method must never read `getCurrentPlayerId()` on the zombie code path — zombie turns run server-side with **no current player**, so it throws. Preferred pattern: the `$activePlayerId` magic param (see 2.2/2.3 — works in every case). In single-active states, an act method using `getActivePlayerId()` also survives zombie delegation (the zombie is still the active player)
-- Use `bga_rand()` for the random default move, not `shuffle()`/`rand()`
+- Pick the default move with the state-class helpers: `$this->getRandomZombieChoice($choices)` (level 1 — random legal choice) or `$this->getBestZombieChoice([$choice => $points], reversed: false)` (level 2 — best immediate gain). Otherwise `bga_rand()`, never `shuffle()`/`rand()`
 - Cannot end game from zombie method — must continue game logic
 - **Declare the Zombie Mode level as metadata before alpha** — BGA defines 4 levels (`https://en.doc.boardgamearena.com/Zombie_Mode#The_different_Zombie_levels`): **0** Passing (no action) · **1** Random (a random legal action) · **2** Greedy (best immediate/visible-information gain) · **3** Smart (can plan or remember hidden info). Fill Game Metadata Manager → **Metadata** tab → "Zombie Mode level" (`0`–`3`) — a missing value blocks "Request ALPHA status" outright (see `references/alpha-release.md`)
-- **Keep every `zombie()` honest about the same declared level** — the metadata field declares one number for the whole game. A truly-random zombie in one state plus a fixed default choice in another mixes level 1 and level 0; upgrade the weaker ones (usually cheap: swap the fixed pick for `bga_rand(0, n-1)`) to match the level you declare
+- **Keep every `zombie()` honest about the same declared level** — the metadata field declares one number for the whole game. A truly-random zombie in one state plus a fixed default choice in another mixes level 1 and level 0; upgrade the weaker ones (usually cheap: swap the fixed pick for `getRandomZombieChoice($legalMoves)`) to match the level you declare
 
 ### Debug tips
 
