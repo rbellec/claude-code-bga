@@ -28,7 +28,8 @@ These files are designed to be loaded on demand by Claude Code when implementing
 
 | Library | File | Purpose |
 |---------|------|---------|
-| Deck | [deck.md](deck.md) | Card/tile management (shuffle, draw, move) |
+| ItemManager + Collection | [item-manager.md](item-manager.md) | Typed game items in DB (cards, tiles, tokens): locations, pick, shuffle, query — successor of Deck |
+| Deck (deprecated) | [deck.md](deck.md) | Legacy card/tile management — pre-2026 projects only |
 | PlayerCounter / TableCounter | [player-table-counter.md](player-table-counter.md) | Tracked numeric counters with auto-notification |
 
 ## JavaScript (Client-side) — Modern ESM
@@ -40,12 +41,14 @@ These files are designed to be loaded on demand by Claude Code when implementing
 | BgaAnimations | [bga-animations.md](bga-animations.md) | Slide, scale, rotate, scoring animations |
 | BgaScoreSheet | [bga-score-sheet.md](bga-score-sheet.md) | Animated end-game score summary |
 | BgaAutofit | [bga-autofit.md](bga-autofit.md) | Auto-size text in fixed containers |
+| BgaZoom | [bga-zoom.md](bga-zoom.md) | Zoom controls + auto-zoom of a wide play area |
+| BgaJumpTo | [bga-jump-to.md](bga-jump-to.md) | Shortcut panel to many boards |
 
 ## JavaScript (Client-side) — Classic Dojo
 
 | Library | File | Purpose |
 |---------|------|---------|
-| Stock | [stock.md](stock.md) | Display sets of items (hand, market) |
+| Stock (deprecated) | [stock.md](stock.md) | Legacy item display (hand, market) — use BgaCards on new projects |
 | Zone | [zone.md](zone.md) | Spatial arrangement of tokens |
 | Counter | [counter.md](counter.md) | Animated numeric display |
 | Scrollmap | [scrollmap.md](scrollmap.md) | Scrollable/pannable game board |

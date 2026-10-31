@@ -2,7 +2,7 @@
 
 **Type:** JS Client (Modern ESM)
 **Doc:** https://en.doc.boardgamearena.com/BgaCards
-**When to use:** Display cards with animations, selection, and movement between stocks (hands, decks, discard). Pairs with PHP Deck for full card game support.
+**When to use:** Display cards with animations, selection, and movement between stocks (hands, decks, discard). Pairs with PHP ItemManager (`references/item-manager.md`; Deck on legacy projects) for full card game support. The `importEsmLib` lines go at the top of `Game.js`, before any class declaration.
 
 ## Setup
 
@@ -95,7 +95,7 @@ stock.onSelectionChange = (selection, lastChange) => {
 ```javascript
 // In setup(gamedatas):
 this.handStock = new BgaCards.LineStock(this.cardsManager, document.getElementById('my-hand'));
-const handCards = Object.values(gamedatas.hand); // PHP returns map, convert to array
+const handCards = gamedatas.hand; // keyed objects accepted since bga-cards 1.0.14 (send ->values() from PHP anyway)
 await this.handStock.addCards(handCards);
 
 // Playing a card (in notification handler):
@@ -119,7 +119,7 @@ Cards get CSS classes based on `type` from the Manager config:
 
 ## Pitfalls
 
-- **PHP Deck returns maps, not arrays** — always `Object.values()` or `array_values()` in PHP before sending to JS
+- **Keyed objects are accepted by `addCards` since 1.0.14**, but numeric fields sent by PHP Deck arrive as **strings** — `BgaCards.sort` and your comparisons expect ints (ItemManager objects are properly typed). Send `->values()` / `array_values()` lists anyway so JSON keeps the order
 - **Fields are strings from PHP** — cast to int for sorting: `card.type_arg = parseInt(card.type_arg, 10)`
 - **`addCards` is async, `setSelectableCards` is sync** — if cards are added in `setup()` and selected in `onEnteringState()`, the selection can run before the cards exist. You can't `await` the sync call; the documented workaround is to promisify with `setTimeout` before selecting
 - **`setSlotsIds` empties the stock** — use `addSlotsIds` to extend without losing cards

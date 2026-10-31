@@ -52,10 +52,13 @@ Recovery sequence (verified):
 | `$this->notifyAllPlayers(...)` / `notifyPlayer(...)` | `$this->bga->notify->all(...)` / `->player(...)` |
 | `initStat / setStat / incStat` | `$this->bga->tableStats` / `$this->bga->playerStats` (⚠ `playerStats->init` has no `$playerId` — see config-files.md) |
 | `DbQuery("UPDATE player SET player_score…")` | `$this->bga->playerScore->set()` / `playerScoreAux` |
-| `$this->getNew('module.common.deck')` + `init()` | `$this->deckFactory->createDeck('table')` in the constructor — see `references/deck.md` |
+| `$this->getNew('module.common.deck')` + `init()` | Keep the table and move to **ItemManager** with `dbField:` mappings (`references/item-manager.md`, "Migrating from Deck") — or, minimal change, `$this->deckFactory->createDeck('table')` (Deck is deprecated) |
 | `throw new BgaUserException(...)` | `\Bga\GameFramework\UserException` |
 | `throw new BgaSystemException / BgaVisibleSystemException / feException` | `\Bga\GameFramework\SystemException` / `VisibleSystemException` (drop `FEX_NOCODE` constants) |
-| `$this->isAsync()` / `isRealtime()` | `$this->tableOptions->isTurnBased()` / `isRealTime()` |
+| `$this->isAsync()` / `isRealtime()` | `$this->bga->tableOptions->isTurnBased()` / `isRealTime()` |
+| `getGameLanguage()` | `$this->bga->tableOptions->getGameLanguage()` |
+| `$this->getTableOptions()` | `$this->bga->tableOptions->get($id)` (metadata only: `getGameOptions()`) |
+| `$this->default_viewport = "width=740"` (JS) | `"game_interface_width": { "min": …, "autoscale": true }` in `gameinfos.jsonc` |
 | `getActivePlayerName()` / `getCurrentPlayerName()` / `getCurrentPlayerColor()` | `getPlayerNameById(...)` / `getPlayerColorById(...)` |
 | `$this->gamestate->state()` / `getState()` | `getCurrentMainState()` / `getCurrentMainStateId()` |
 | `totranslate()` / `$this->_()` | `clienttranslate()` |

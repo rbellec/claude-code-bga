@@ -1,8 +1,8 @@
 # Deck — BGA Library Reference
 
-**Type:** PHP Server
+**Type:** PHP Server — **DEPRECATED (October 2026)**
 **Doc:** https://en.doc.boardgamearena.com/Deck
-**When to use:** Any game with cards or tiles that need shuffling, drawing, hands, or discard piles.
+**When to use:** Only on a project that already uses it. BGA: *"A new lib for game items has been added to the framework: ItemManager. This page is only kept here for reference of old projects using it, but don't use it for new projects."* New games → `references/item-manager.md` (typed objects, no dbmodel.sql table, migration path from an existing Deck table documented there).
 
 ## Setup
 
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS `mygame_card` (
 
 ### Picking
 - `pickCard($location, $player_id)` — 1 card to player hand
-- `pickCards($nbr, $location, $player_id)` — N cards to player hand, returns picked cards
+- `pickCards($nbr, $location, $player_id)` — N cards to player hand, returns picked cards (`null` when the location is empty)
 - `pickCardForLocation($from, $to, $location_arg=0)` — flexible destination
 - `pickCardsForLocation($nbr, $from, $to, $location_arg=0, $no_deck_reform=false)` — batch flexible
 
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS `mygame_card` (
 - `getCardsOfTypeInLocation($type, $type_arg, $location, $location_arg)` — combined filter
 
 ### Counting
-- `countCardInLocation($location, $location_arg=null)` — count
+- `countCardInLocation($location, $location_arg=null)` — count (returns int|string — cast; alias `countCardsInLocation`)
 - `countCardsInLocations()` — all locations summary
 - `countCardsByLocationArgs($location)` — distribution by location_arg
 
@@ -116,7 +116,7 @@ public static function parseCard(array $card): array {
 - **`autoreshuffle`** handles deck-empty automatically with callback
 - **Increase `varchar(16)` to `varchar(20)`** if using long type names or player IDs in locations — silent truncation is hard to debug
 - **Schema change = fresh table** — old tables keep old schema; quit all tables and create new ones
-- **`getCardsInLocation` returns a map keyed by card_id** (not an array) — use `array_values()` before sending to JS if order matters
+- **`getCardsInLocation` returns a map keyed by card_id** (not an array) — use `array_values()` before sending to JS if order matters; with `$order_by` the result is NOT keyed by id; `$location` may be an array of locations
 - **No reshuffle on peek** — `getCardOnTop()` won't trigger autoreshuffle when deck is empty
 - **Multiple decks** — create separate DB tables; call `createDeck()` multiple times
 - **Private info** — use `notify->player()` for hidden card distributions, not `notify->all()`

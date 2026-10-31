@@ -60,7 +60,7 @@ Each question gets a **status** and a **category**.
 | `RULES-AMBIGUOUS` | Rule text can be read multiple ways | "Does 'place' include 'move'?" |
 | `RULES-IMPLICIT` | Answer is deductible but not stated | "Can you move off the board edge?" |
 | `RULES-VISUAL` | Answer might be in illustrations but not text | "What's the grid size?" |
-| `IMPLEMENTATION` | Rules are clear but implementation approach needs a decision | "Should we use Deck component or custom table?" |
+| `IMPLEMENTATION` | Rules are clear but implementation approach needs a decision | "Should we use the ItemManager component or custom table?" |
 | `FEEDBACK` | Suggestion for improving the rulebook (not blocking) | "Adding a diagram would clarify setup" |
 
 ## Step 4 — Document Format

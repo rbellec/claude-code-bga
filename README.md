@@ -67,7 +67,7 @@ The skill commits automatically at each milestone and deploys via `scp`/`make`. 
 - Project scaffolding (Makefile, directory structure, config files)
 - BGA new framework patterns (PHP 8.4, state classes, notifications, globals)
 - JavaScript client structure (ES6 modules, state handlers)
-- **BGA library references** — detailed guides for Deck, BgaCards, Stock, Counter, Scrollmap, and 10 other BGA framework libraries, loaded on demand to keep context usage low (see [`skills/board-game-arena/references/`](skills/board-game-arena/references/))
+- **BGA library references** — detailed guides for ItemManager, BgaCards, BgaZoom, Counter, Scrollmap, and 11 other BGA framework libraries (Deck/Stock kept for legacy projects), loaded on demand to keep context usage low (see [`skills/board-game-arena/references/`](skills/board-game-arena/references/))
 - **Optional PHP code quality loop** — PHP-CS-Fixer, Rector, PHPStan (level max), PHPMD wired as `make audit`. See [`references/php-code-quality.md`](skills/board-game-arena/references/php-code-quality.md).
 - Automated deploy-test loop via Chrome extension
 - Known BGA pitfalls and how to avoid them (SQL comments, table names, DB query gotchas)

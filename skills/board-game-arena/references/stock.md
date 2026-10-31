@@ -1,8 +1,8 @@
 # Stock — BGA Library Reference
 
-**Type:** JS Client (Classic Dojo)
+**Type:** JS Client (Classic Dojo) — **DEPRECATED (October 2026)**
 **Doc:** https://en.doc.boardgamearena.com/Stock
-**When to use:** Display sets of game elements (cards, tokens, tiles) with sprite-based rendering, selection, and animation. Classic alternative to BgaCards — use BgaCards for new card games instead.
+**When to use:** Only on a project that already uses it — the doc page is *"only kept here for reference of old projects using it, but don't use it for new projects."* New games display cards/tokens with BgaCards (`references/bga-cards.md`).
 
 ## Setup
 
