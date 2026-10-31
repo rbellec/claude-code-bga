@@ -210,12 +210,12 @@ class PlayerTurn extends GameState
     public function onEnteringState(int $activePlayerId) { }
 
     #[PossibleAction]
-    public function actDoSomething(string $param, int $activePlayerId, array $args): string {
+    public function actDoSomething(int $cellId, int $activePlayerId, array $args): string {
         // $activePlayerId and $args are MAGIC params: autowired by the framework, never
         // sent by the client ($args = this state's getArgs()). Do NOT call
         // getCurrentPlayerId() here — it fails when zombie() delegates to this method
         // (server-side call, no current player).
-        if (!in_array($param, $args['playableIds'])) {
+        if (!in_array($cellId, $args['playableIds'], true)) {
             throw new UserException(clienttranslate('Invalid choice'));
         }
         // do work...
