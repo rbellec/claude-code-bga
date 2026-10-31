@@ -16,8 +16,10 @@ public function __construct() {
     $this->playerEnergy = $this->counterFactory->createPlayerCounter('energy');
     $this->roundCounter = $this->counterFactory->createTableCounter('round');
     // Full factory signature: createPlayerCounter(string $name, ?int $min = 0,
-    //   ?int $max = null, CounterVisibility $visibility = VISIBLE, bool $useNo = false)
-    // min/max bound the counter; visibility 'self'/'private' hides values (see Pitfalls)
+    //   ?int $max = null, CounterVisibility $visibility = VISIBLE, bool $useNo = false, ?bool $strict = null)
+    // min/max bound the counter; visibility 'self'/'private' hides values (see Pitfalls);
+    // useNo = address players by seat number instead of id; strict = throw when the
+    // id/no passed to get/set/inc is unknown (also ->setUseNo() / ->setStrict() later)
 }
 
 // In setupNewGame() — use its $players argument directly:
@@ -35,7 +37,7 @@ public function getAllDatas(int $currentPlayerId): array {
 
 ## API — PlayerCounter
 
-- `initDb(array $playerIds, int $initialValue = 0)` — create DB table (setupNewGame only)
+- `initDb(array $playerIdsOrNos, int $initialValue = 0)` — create DB table (setupNewGame only)
 - `get(int $playerId): int` — get one player's value
 - `set(int $playerId, int $value, ?NotificationMessage)` — set + notify
 - `inc(int $playerId, int $inc, ?NotificationMessage)` — increment + notify

@@ -31,6 +31,23 @@ When adding or updating BGA library references:
 
 When publishing a release: bump `version` in `.claude-plugin/plugin.json` so installed users see the update (omit it to auto-track commit SHA instead).
 
+## Checking for framework API drift
+
+The authoritative API is not the wiki but two generated files BGA pushes to the root of **every** Studio project (old or new), refreshed server-side: `_ide_helper.php` (PHP) and `bga-framework.d.ts` (JS). The wiki lags behind them (e.g. it omitted `addActionButton` options the d.ts had typed for months).
+
+To check whether the skill is stale:
+
+1. Download the current pair from any project of the account via SFTP (read-only; deploy config lives in the project Makefiles, never read the private key):
+   ```
+   sftp -i ~/.ssh/<key> -P 2022 -o IdentitiesOnly=yes USER@1.studio.boardgamearena.com
+   > get GAMENAME/_ide_helper.php  > get GAMENAME/bga-framework.d.ts
+   ```
+2. `diff` against the baseline the skill was last synced to (last sync: stubs dated **2026-10-26**; keep a copy of the synced pair outside the repo, e.g. in the gitignored `.archives/`, or use the copies in a local project's `bga_initial_code_template/`).
+3. For each added/changed/`@deprecated` member, decide: SKILL.md (only if a dev can violate it without loading a reference), the relevant `references/*.md`, or nothing.
+4. Only then look at the wiki `Special:RecentChanges` for prose changes (checklists, guidelines, process pages) the stubs cannot show.
+
+Real, running projects remain the tiebreaker for anything behavioral the stubs do not state (visibility quirks, runtime errors).
+
 ## Language
 
 `README.md` is in English. `README.fr.md` is the French translation — keep both in sync when updating.

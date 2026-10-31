@@ -23,6 +23,23 @@ $this->bga->notify->player($pid, 'cardsDrawn', clienttranslate('You draw ${count
 ]);
 ```
 
+### Decorator — fill recurring args once
+
+Registered once (constructor), applied to the args of every `notify->all/player` call. The scaffold ships this example commented out:
+
+```php
+$this->bga->notify->addDecorator(function (string $message, array $args): array {
+    if (isset($args['player_id']) && !isset($args['player_name']) && str_contains($message, '${player_name}')) {
+        $args['player_name'] = $this->getPlayerNameById($args['player_id']);
+    }
+    return $args;   // must return the (possibly extended) args
+});
+```
+
+### Addressing players by "no"
+
+`$this->bga->notify->setUseNo(true)` makes `notify->player($no, …)` take the seat number instead of the player id (same switch exists on `playerStats` and `PlayerCounter`). Keep the whole game on one convention.
+
 ### Player Name Highlighting
 
 Use `${player_name}` in the message with a matching `player_id` in args — BGA auto-colors it.

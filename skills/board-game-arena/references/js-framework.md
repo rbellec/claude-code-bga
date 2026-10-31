@@ -7,7 +7,7 @@
 ## Lifecycle
 
 ```javascript
-constructor()                          // global vars, register state classes
+constructor(bga)                       // receives the `bga` facade: this.bga = bga; globals, register state classes
 setup(gamedatas)                       // build UI, connect events, setup notifications
 onEnteringState(stateName, args)       // state-specific UI (NOT called after setup)
 onLeavingState(stateName)              // cleanup
@@ -17,15 +17,24 @@ onUpdateActionButtons(stateName, args) // action buttons (REQUIRED for multiacti
 ## State Management
 
 ```javascript
-// JS State Classes (optional — alternative to switch in onEnteringState)
+// JS State Classes — the scaffold's default pattern (alternative: a switch in
+// Game.onEnteringState). One class per PHP state, registered in the constructor.
 class PlayerTurn {
     constructor(game, bga) { this.game = game; this.bga = bga; }
-    onEnteringState(args, isCurrentPlayerActive) { }
+    onEnteringState(args, isCurrentPlayerActive) { }          // args = PHP getArgs()
     onLeavingState(args, isCurrentPlayerActive) { }
-    onPlayerActivationChange(args, isCurrentPlayerActive) { }
+    onPlayerActivationChange(args, isCurrentPlayerActive) { } // multiactive: call it yourself at the end of onEnteringState
+    // this.args is filled automatically with the current state args
 }
-this.bga.states.register('PlayerTurn', new PlayerTurn(this, this.bga));
-this.bga.states.logger = console.log; // debug
+this.bga.states.register('PlayerTurn', new PlayerTurn(this, this.bga)); // name or numeric id
+this.bga.states.logger = console.log; // debug — remove before production
+
+// Accessors
+this.bga.states.getStateClass('PlayerTurn');
+this.bga.states.getCurrentMainStateName();    // ignores private states
+this.bga.states.getCurrentPlayerStateName();  // private state name if any
+this.bga.states.getCurrentMainStateClass();   // instance
+this.bga.states.getCurrentPlayerStateClass(); // instance
 
 // Client states (multi-step interactions without server)
 this.bga.states.setClientState('client_selectTarget', {
@@ -46,6 +55,13 @@ this.bga.players.getPlayerById(pid)           // player data object (also getCur
 this.bga.players.getActivePlayerId()          // single active player
 this.bga.players.getActivePlayerIds()         // array (multiactive)
 this.bga.players.getPlayerAvatarUrl(pid, 50)  // sizes: 32, 50, 92, 184
+
+// Player "no" (seat number, 1-based turn order) ↔ id — pairs with the PHP useNo APIs
+this.bga.players.getCurrentPlayerNo()         // null for spectators
+this.bga.players.getActivePlayerNo()
+this.bga.players.getPlayerByNo(no)
+this.bga.players.getPlayerNoById(pid)
+this.bga.players.getPlayerIdByNo(no)
 
 // Read-only detection (spectator, replay, archive)
 const isReadOnly = this.bga.players.isCurrentPlayerSpectator()
@@ -111,12 +127,14 @@ this.bga.statusBar.addActionButton(
         id: 'playBtn',       // DOM id
         classes: 'mygame-btn', // extra CSS classes
         disabled: false,     // grayed out
-        title: _('Play your selected card'), // hover title
+        title: _('Play your selected card'), // plain-text label description (a11y, for icon labels)
+        tooltip: _('Plays the card and ends your turn'), // tooltip on the button
+        confirm: _('Play this card?'),  // confirm dialog before the callback (string, or () => string|null to decide at click time)
+        autoclick: false,    // true | { abortSignal, pausable } — auto-click after a short delay (confirmation buttons)
         // destination: element — place the button elsewhere than the status bar
     }
-);
-// For a confirmation step, use this.bga.dialogs.confirmation() in the callback
-// — addActionButton has no documented 'confirm' or 'tooltip' option.
+);  // returns the HTMLButtonElement
+// (The options above are those typed in bga-framework.d.ts — the wiki page lags behind it.)
 
 // Status bar title
 this.bga.statusBar.setTitle(_('${you} must choose a card'), {});
@@ -135,6 +153,7 @@ this.bga.actions.performAction('actPlay', args, {
     lock: true,                    // lock UI during call (default true)
     checkAction: true,             // verify action possible (default true)
     checkPossibleActions: false,   // ignore lock/active (for multiactive "change mind")
+    ignoreDefaultErrorHandler: false, // true = handle the rejection yourself (no red banner)
 });
 
 // Don't name args after the PHP magic parameters (args, activePlayerId,
@@ -163,14 +182,26 @@ this.bga.dialogs.confirmation(_('Are you sure?')).then(result => {
     if (result) { /* proceed */ }
 });
 
-// Multiple choice
-this.bga.dialogs.multipleChoice(_('How many?'), ['0', '1', '5']).then(choice => {
-    if (choice !== null) { /* handle */ }
+// Multiple choice — choices is a map value => label; resolves with the KEY (string) or null
+this.bga.dialogs.multipleChoice(_('How many?'), { 0: '0', 1: '1', 5: '5' }).then(choice => {
+    if (choice !== null) { /* handle parseInt(choice, 10) */ }
 });
 
 // Message
-this.bga.dialogs.showMessage(_('Important announcement'), 'info'); // 'info' or 'error'
-this.bga.gameui.showMoveUnauthorized(); // standard error
+this.bga.dialogs.showMessage(_('Important announcement'), 'info'); // 'info' | 'error' (also logged) | 'only_to_log'
+this.bga.dialogs.showMoveUnauthorized(); // standard "not allowed now" error
+
+// Info popin (Ok button) — resolves when closed
+await this.bga.dialogs.info(_('The deck is empty: last round'), _('Last round'));
+
+// Generic HTML dialog — resolves when hidden/destroyed
+await this.bga.dialogs.generic(_('Scoring details'), '<div id="scoring-table"></div>', {
+    id: 'mygame-scoring',        // auto-generated if omitted
+    beforeShow: (dialog) => { /* populate #scoring-table */ },
+    maxWidth: 800,
+    hideCloseIcon: false,
+    closeOnOverlayClick: true,   // forced to false when hideCloseIcon is true
+});
 
 // Scoring popup
 this.bga.gameui.displayScoring('anchor_id', 'ff0000', '+10', 1000);
@@ -200,6 +231,10 @@ panel.insertAdjacentHTML('beforeend', '<div>Custom content</div>');
 // Score counter
 const counter = this.bga.playerPanels.getScoreCounter(playerId);
 
+// Same, addressed by player no (seat number) instead of id
+this.bga.playerPanels.getElementByNo(playerNo);
+this.bga.playerPanels.getScoreCounterByNo(playerNo);
+
 // Automata (AI) player
 this.bga.playerPanels.addAutomataPlayerPanel(0, 'Bot', { score: 0 });
 
@@ -216,7 +251,7 @@ this.bga.gameui.enableAllPlayerPanels();
 this.bga.images.dontPreloadImage('unused.png');         // skip root images
 this.bga.images.preloadImages(['expansion/cards.png']); // load non-root
 const url = this.bga.images.getImgUrl('board.jpg');     // get URL
-// Also: g_gamethemeurl + 'img/file.svg'
+// g_gamethemeurl + 'img/file.svg' still works but is @deprecated in favor of getImgUrl()
 
 // Sounds (no file extension — BGA serves .ogg or .mp3)
 this.bga.sounds.play('click');
@@ -228,6 +263,44 @@ this.bga.gameui.disableNextMoveSound(); // suppress default move sound
 
 ```javascript
 const pref = this.bga.userPreferences.get(100); // preference ID from gamepreferences.json
+```
+
+## Table Options (client side)
+
+```javascript
+this.bga.tableOptions.get(100);          // value of a gameoptions.json option
+this.bga.tableOptions.isTurnBased();
+this.bga.tableOptions.isRealTime();
+this.bga.tableOptions.getGameVersion();  // game version when the page was loaded
+this.bga.tableOptions.getGameLanguage(); // index from gameinfos language_dependency, or null
+```
+
+## 3D Display
+
+`this.bga.display3D` wraps BGA's legacy 3D table view (rotate / slide / zoom of a set of elements):
+
+```javascript
+this.bga.display3D.init3d({
+    elements: [document.getElementById('board')],
+    showControls: true,                      // legacy 3D control buttons
+    view: { zoom: 1, minZoom: 0.5, maxZoom: 2, xAxis: 0, zAxis: 0 },
+    draggable: true,                         // right-button rotate, middle-button slide (or { rotationMultiplier, slideMultiplier })
+    zoomByWheel: true,                       // or { multiplier }
+});
+this.bga.display3D.setElements([...]); this.bga.display3D.addElements([...]);
+this.bga.display3D.rotate(dx, dz); this.bga.display3D.slide(dx, dy); this.bga.display3D.zoom(inc);
+this.bga.display3D.setZoom(1.5); this.bga.display3D.resetView();
+// bounds: setMinXAxis/setMaxXAxis/setMinZAxis/setMaxZAxis/setMin|MaxXPos/setMin|MaxYPos/setMin|MaxZoom(value|null)
+```
+
+## Loading Libraries
+
+```javascript
+// ESM libs (typed names: 'bga-animations' | 'bga-autofit' | 'bga-cards' | 'bga-dice' |
+//           'bga-jump-to' | 'bga-score-sheet' | 'bga-zoom'); version '1.x' = latest 1.*, or pinned '1.0.0'
+const BgaCards = await importEsmLib('bga-cards', '1.x');
+getLibUrl('bga-cards', '1.x');            // URL only
+// Dojo/UMD legacy components (ebg.stock, ebg.zone, …): importDojoLibs — see their reference files
 ```
 
 ## Event Handling
@@ -257,3 +330,5 @@ this.bga.gameui.disconnectAll();
 - **Tooltips need unique IDs** on all target elements
 - **Avoid custom zoom** — provide +/- if essential, but default view must be fully playable
 - **Deprecated: dojo.query, dojo.style** — use vanilla JS (document.querySelector, classList, etc.)
+- **Trust `bga-framework.d.ts` over the wiki** — the scaffold's declaration file is generated from the framework; when the wiki omits an option the d.ts lists (e.g. `addActionButton` `tooltip`/`confirm`/`autoclick`), the d.ts is right
+- **Tutorial mode detection** — `typeof g_tutorialwritten !== 'undefined'` (object when a tutorial is being played)

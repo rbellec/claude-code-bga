@@ -39,6 +39,11 @@ $this->getCurrentPlayerId();                 // requester (actions + getAllDatas
 $this->loadPlayersBasicInfos();              // cached player array
 $this->getPlayerNameById($pid);
 $this->getPlayerColorById($pid);
+$this->getPlayerNameByNo($no);               // by seat number ("player no", 1-based turn order)
+
+// "Player no" variants: act methods can take the magic `int $activePlayerNo` /
+// `int $currentPlayerNo` instead of the id; notify, playerStats and PlayerCounter
+// switch to no-addressing with ->setUseNo(true) (JS side: this.bga.players.getPlayerByNo & co)
 
 // Turn order navigation
 $this->getPlayerAfter($pid);                 // next in natural order
@@ -55,12 +60,19 @@ $this->activeNextPlayer();                   // advance turn
 $this->activePrevPlayer();                   // go back
 $this->gamestate->changeActivePlayer($pid);  // set specific player
 
-// Multiple active players
+// Multiple active players — $next is a state class (NextState::class), a state id,
+// or a callable; legacy transition names only work with states.inc.php
 $this->gamestate->setAllPlayersMultiactive();
-$this->gamestate->setPlayersMultiactive($ids, $nextTransition, $exclusive);
-$this->gamestate->setPlayerNonMultiactive($pid, $nextTransition);
+$this->gamestate->setPlayersMultiactive($ids, $next, $exclusive);
+$this->gamestate->setPlayerNonMultiactive($pid, $next);   // returns true when it moved to $next
+$this->gamestate->updateMultiactiveOrNextState($next);     // go to $next if nobody is active any more
 $this->gamestate->getActivePlayerList();     // array of active player IDs
 $this->gamestate->isPlayerActive($pid);      // check
+
+// Current state as an object
+$this->gamestate->getCurrentMainStateId();
+$this->gamestate->getCurrentMainStateClass();        // state class instance (ignores private states)
+$this->gamestate->getCurrentStateClass($playerId);   // the player's private state if in one
 
 // CRITICAL: Cannot change active player inside ACTIVE_PLAYER states
 // Use a GAME-type state for that
@@ -112,7 +124,7 @@ public function actSubmitData(#[JsonParam(class: MyDTO::class)] MyDTO $data): st
 public function actCancel(): string { ... }
 ```
 
-**Reserved (magic) parameter names** — the framework auto-fills these in act methods, so they can never carry client-sent values: `$args`, `$activePlayerId`/`$active_player_id`, `$activePlayerNo`/`$active_player_no`, `$currentPlayerId`/`$current_player_id`, `$currentPlayerNo`/`$current_player_no`. (In PRIVATE-state `getArgs`/`onEnteringState`, `$playerId`/`$player_id`/`$playerNo`/`$player_no` are magic too.)
+**Reserved (magic) parameter names** — the framework auto-fills these in act methods, so they can never carry client-sent values: `array $args` (the state's own `getArgs()` result — validate client input against it rather than recomputing), `$activePlayerId`/`$active_player_id`, `$activePlayerNo`/`$active_player_no`, `$currentPlayerId`/`$current_player_id`, `$currentPlayerNo`/`$current_player_no`. (In PRIVATE-state `getArgs`/`onEnteringState`, `$playerId`/`$player_id`/`$playerNo`/`$player_no` are magic too.)
 
 ## Private Parallel States
 
@@ -140,7 +152,9 @@ $this->bga->globals->get('key');
 $this->bga->globals->inc('counter', 5);     // increment
 $this->bga->globals->delete('key');
 
-// Legacy (int only — DO NOT mix with above)
+// Legacy (int only — DO NOT mix with above). Officially @deprecated in the framework
+// stub: "use $this->bga->globals API instead. It's not the same DB table as
+// GameStateValue, so if your game is in production and using it, keep it"
 $this->initGameStateLabels(['key' => 10]);
 $this->setGameStateValue('key', $n);
 $this->getGameStateValue('key');
@@ -153,12 +167,14 @@ $this->getGameStateValue('key');
 $this->bga->playerScore->set($pid, $score);
 $this->bga->playerScoreAux->set($pid, $tiebreaker);
 
-// Reverse scoring (lowest wins)
-return GameResult::individualRanking($players, reverseScore: true);
+// Reverse scoring (lowest wins) — $players may be null (= all players), ids or Player objects
+return GameResult::individualRanking($players, reverseScore: true, reverseScoreAux: false);
 
-// Cooperative
-// Set 'is_coop' => 1 in gameinfos.inc.php
-// All winners get same score; losers get 0
+// Cooperative — set "is_coop": 1 in gameinfos; one team of all players, outcome decided by $win
+return GameResult::coop($players /* or null = all */, score: $teamScore, win: $won);
+
+// Solo (internally a coop result of one player) — see "solo_mode_ranked" in gameinfos
+return GameResult::solo($playerId /* or null = the only player */, score: $score, win: $won);
 
 // Elimination (mid-game removal)
 $this->eliminatePlayer($pid);
@@ -218,6 +234,19 @@ $isTurnBased = $this->bga->tableOptions->isTurnBased();
 $isRealTime  = $this->bga->tableOptions->isRealTime();
 ```
 
+## Table Options, Version, Language, Tournament
+
+```php
+$this->bga->tableOptions->get(100);            // ?int — null if the table predates the option
+$this->bga->tableOptions->set(100, $value);    // ONLY for "random" options: store the value actually drawn
+$this->bga->tableOptions->getGameVersion();    // int
+$this->bga->tableOptions->getGameLanguage();   // ?int index into gameinfos language_dependency
+                                               // (Table::getGameLanguage() is deprecated)
+$this->bga->tournament->isTournament();
+$this->bga->tournament->getInfo();             // [] outside a tournament; keys id, name, championship_name, …
+$this->bga->tournament->getSeedInfo();         // tournament_seed / step_seed for deterministic randomness
+```
+
 ## Player Color Preferences
 
 Default colors come from `player_colors` in the gameinfos file. To honor players' favorite colors, set `favorite_colors_support` to true there and call:
@@ -268,6 +297,20 @@ public function zombie(int $playerId): string {
 // The act method it delegates to (magic param autowired by the framework):
 #[PossibleAction]
 public function actPass(int $activePlayerId): string { ... }
+
+// Choosing the default move — helpers on GameState, matching the declared Zombie Mode level:
+$choice = $this->getRandomZombieChoice($legalMoveIds);                 // level 1: random legal choice
+$choice = $this->getBestZombieChoice(['a' => 3, 'b' => 7], reversed: false); // level 2: best immediate points (random among ties)
+```
+
+## Debug: auto-play with zombies
+
+```php
+// From a debug_* helper (see references/debug-helpers.md): let the zombie code play
+// moves until the callback returns true — the scaffold's debug_playOneMove() uses it
+public function debug_playOneMove() {
+    $this->bga->debug->playUntil(fn(int $count) => $count == 1);
+}
 ```
 
 ## Database Migrations (post-release)
@@ -293,3 +336,4 @@ public function upgradeTableDb(string $fromVersion): void {
 - **String comparison: `===` not `==`** — hex colors like `'4baae2'` miscast with `==`
 - **`material.inc.php` is auto-included** — never `include()` it manually
 - **Constants: `public const` not `define()`** — define() globals invisible in namespace
+- **`_ide_helper.php` (scaffold root) is the authoritative PHP API** — grep it before declaring a method missing or inventing one; it also carries the `@deprecated` notes

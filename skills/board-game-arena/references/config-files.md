@@ -53,8 +53,10 @@ Auto-renders as checkbox if exactly 2 values with names: yes/no, on/off, or enab
 ### Access in PHP
 
 ```php
-$value = (int)$this->bga->tableOptions->get(100);
+$value = (int)$this->bga->tableOptions->get(100);   // null (→ 0) on tables created before the option existed
 // Or in setupNewGame: $options parameter
+// Random options: once the value is drawn, record it with
+// $this->bga->tableOptions->set(100, $drawn); — set() is for random options only
 ```
 
 ### Reserved IDs
